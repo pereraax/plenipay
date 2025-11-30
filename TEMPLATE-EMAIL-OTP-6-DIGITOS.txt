@@ -1,0 +1,58 @@
+===========================================
+TEMPLATE DE EMAIL PARA OTP - 6 DÍGITOS
+===========================================
+
+SUBJECT (Assunto):
+------------------
+Confirme seu cadastro - Código: {{ substr .Token 0 6 }}
+
+
+BODY (Corpo do Email) - Source:
+--------------------------------
+<h2>Confirme seu cadastro</h2>
+
+<p>Olá!</p>
+
+<p>Seu código de confirmação é:</p>
+
+<h1 style="font-size: 32px; letter-spacing: 8px; color: #00C2FF; text-align: center; padding: 20px; background: #f0f0f0; border-radius: 8px; margin: 20px 0;">
+  {{ substr .Token 0 6 }}
+</h1>
+
+<p>Digite este código de 6 dígitos no aplicativo para confirmar seu email.</p>
+
+<p><strong>Este código expira em 1 hora.</strong></p>
+
+<p>Se você não solicitou este código, ignore este email.</p>
+
+<hr style="margin: 20px 0; border: none; border-top: 1px solid #ddd;">
+
+<p style="font-size: 12px; color: #666;">
+  Este é um email automático, por favor não responda.
+</p>
+
+===========================================
+INSTRUÇÕES:
+===========================================
+
+1. Acesse: https://app.supabase.com
+2. Vá em: Authentication > Email > "Confirm signup"
+3. Cole o SUBJECT no campo "Subject"
+4. Cole o BODY no campo "Body" (aba "Source")
+5. Clique em "Save" ou "Update"
+
+IMPORTANTE: 
+- Use {{ substr .Token 0 6 }} para mostrar apenas os primeiros 6 dígitos
+- Isso garante que o código tenha exatamente 6 caracteres
+
+===========================================
+NOTA:
+===========================================
+
+O Supabase pode gerar tokens com mais de 6 caracteres, mas usando
+{{ substr .Token 0 6 }} você garante que apenas os primeiros 6
+dígitos sejam mostrados no email.
+
+
+
+

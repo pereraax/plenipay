@@ -1,0 +1,64 @@
+===========================================
+TEMPLATE DE EMAIL PARA OTP - APENAS 6 DÍGITOS
+===========================================
+
+SUBJECT (Assunto):
+------------------
+Confirme seu cadastro - Código: {{ slice .Token 0 6 }}
+
+
+BODY (Corpo do Email) - Source:
+--------------------------------
+<h2>Confirme seu cadastro</h2>
+
+<p>Olá!</p>
+
+<p>Seu código de confirmação de 6 dígitos é:</p>
+
+<h1 style="font-size: 32px; letter-spacing: 8px; color: #00C2FF; text-align: center; padding: 20px; background: #f0f0f0; border-radius: 8px; margin: 20px 0;">
+  {{ slice .Token 0 6 }}
+</h1>
+
+<p><strong>Digite este código de 6 dígitos no aplicativo para confirmar seu email.</strong></p>
+
+<p style="color: #666; font-size: 12px;">
+  ⚠️ Use apenas os 6 dígitos mostrados acima.
+</p>
+
+<p>Este código expira em 1 hora.</p>
+
+<p>Se você não solicitou este código, ignore este email.</p>
+
+===========================================
+INSTRUÇÕES:
+===========================================
+
+1. Acesse: https://app.supabase.com
+2. Vá em: Authentication > Email > "Confirm signup"
+3. Cole o SUBJECT no campo "Subject"
+4. Cole o BODY no campo "Body" (aba "Source")
+5. Clique em "Save" ou "Update"
+
+IMPORTANTE: 
+- Use {{ slice .Token 0 6 }} para mostrar apenas os primeiros 6 dígitos
+- Se {{ slice }} não funcionar, use: {{ printf "%.6s" .Token }}
+
+===========================================
+ALTERNATIVA (Se slice não funcionar):
+===========================================
+
+SUBJECT:
+Confirme seu cadastro - Código: {{ printf "%.6s" .Token }}
+
+BODY:
+<h2>Confirme seu cadastro</h2>
+<p>Seu código de confirmação de 6 dígitos é:</p>
+<h1 style="font-size: 32px; letter-spacing: 8px; color: #00C2FF; text-align: center; padding: 20px; background: #f0f0f0; border-radius: 8px; margin: 20px 0;">
+  {{ printf "%.6s" .Token }}
+</h1>
+<p>Digite este código no aplicativo.</p>
+<p>Este código expira em 1 hora.</p>
+
+
+
+
