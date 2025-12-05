@@ -77,8 +77,7 @@ export async function POST(request: NextRequest) {
     // PASSO 1: Sempre limpar confirmação para forçar novo envio
     console.log('🔧 PASSO 1: Limpando confirmação de email para forçar novo envio...')
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, { 
-      email_confirm: false,
-      email_verified: false
+      email_confirm: false
     })
     
     if (updateError) {
@@ -95,48 +94,8 @@ export async function POST(request: NextRequest) {
     const redirectTo = `${siteUrl}/auth/callback?next=/home`
     console.log('🔗 URL de redirecionamento:', redirectTo)
     
-    // PASSO 3: Gerar link PRIMEIRO usando generateLink (garante que o link existe)
-    console.log('📤 PASSO 3: Gerando link de confirmação usando generateLink...')
-    let confirmationLink: string | null = null
-    
-    try {
-      const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
-        type: 'signup',
-        email: email,
-        options: {
-          redirectTo: redirectTo,
-          data: {
-            ...user.user_metadata
-          }
-        }
-      })
-      
-      if (linkError) {
-        console.error('❌ Erro ao gerar link:', linkError.message)
-        console.error('❌ Detalhes do erro:', JSON.stringify(linkError, null, 2))
-      } else if (linkData?.properties?.action_link) {
-        confirmationLink = linkData.properties.action_link
-        console.log('✅ Link gerado com sucesso!')
-        console.log('🔗 Link completo:', confirmationLink.substring(0, 100) + '...')
-        console.log('📝 Tipo do link:', linkData.type)
-        console.log('📝 Propriedades:', JSON.stringify(linkData.properties, null, 2))
-      } else {
-        console.error('❌ Link gerado mas sem action_link')
-        console.error('❌ Dados retornados:', JSON.stringify(linkData, null, 2))
-      }
-    } catch (linkException: any) {
-      console.error('❌ Exceção ao gerar link:', linkException.message)
-      console.error('❌ Stack:', linkException.stack)
-    }
-    
-    // Aguardar um pouco para garantir que o token foi criado
-    if (confirmationLink) {
-      console.log('⏳ Aguardando 2 segundos para garantir que o token foi processado...')
-      await new Promise(resolve => setTimeout(resolve, 2000))
-    }
-    
-    // PASSO 4: Usar inviteUserByEmail como método PRINCIPAL (sempre envia email)
-    console.log('📤 PASSO 4: Tentando inviteUserByEmail (método principal - sempre envia email)...')
+    // PASSO 3: Usar inviteUserByEmail como método PRINCIPAL (sempre envia email)
+    console.log('📤 PASSO 3: Tentando inviteUserByEmail (método principal - sempre envia email)...')
     try {
       const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         email,
@@ -161,18 +120,6 @@ export async function POST(request: NextRequest) {
         if (errorMsg.includes('already exists') || errorMsg.includes('already registered')) {
           console.log('⚠️ Usuário já existe (esperado), mas inviteUserByEmail pode ter enviado email mesmo assim')
           
-          // Se temos o link gerado, retornar sucesso mesmo assim
-          if (confirmationLink) {
-            console.log('✅ Temos link gerado, retornando sucesso (email pode ter sido enviado)')
-            return NextResponse.json({
-              success: true,
-              message: 'Link de confirmação enviado! Verifique sua caixa de entrada (incluindo spam).',
-              method: 'invite_user_by_email_with_link',
-              linkGenerated: true,
-              note: 'Se não receber, verifique spam e logs do Supabase (Authentication → Logs). Link foi gerado com sucesso.'
-            })
-          }
-          
           return NextResponse.json({
             success: true,
             message: 'Link de confirmação enviado! Verifique sua caixa de entrada (incluindo spam).',
@@ -192,8 +139,7 @@ export async function POST(request: NextRequest) {
           success: true,
           message: 'Link de confirmação enviado! Verifique sua caixa de entrada.',
           method: 'invite_user_by_email',
-          linkGenerated: !!confirmationLink,
-          note: 'Se não receber, verifique spam e logs do Supabase. Link foi gerado com sucesso.'
+          note: 'Se não receber, verifique spam e logs do Supabase.'
         })
       }
     } catch (inviteException: any) {
@@ -236,9 +182,9 @@ export async function POST(request: NextRequest) {
     console.log('⚠️ Resend falhou:', resendError?.message || 'Sem erro mas sem dados')
     
     // PASSO 6: Último fallback - Tentar com type 'email'
-    console.log('📤 PASSO 6: Tentando resend com type "email" (último fallback)...')
+    console.log('📤 PASSO 6: Tentando resend com type "signup" (último fallback)...')
     const { data: resendData2, error: resendError2 } = await supabasePublic.auth.resend({
-      type: 'email',
+      type: 'signup',
       email: email,
       options: {
         emailRedirectTo: redirectTo
@@ -257,34 +203,7 @@ export async function POST(request: NextRequest) {
     
     console.log('⚠️ Todos os métodos falharam. Verificando configuração...')
     
-    // Se chegou aqui, pode ser problema de configuração
-    // Mas se temos o link gerado, ainda podemos informar que o link foi criado
-    if (confirmationLink) {
-      console.log('⚠️ Link foi gerado mas email não foi enviado pelo Supabase')
-      console.log('🔗 Link gerado (primeiros 100 chars):', confirmationLink.substring(0, 100) + '...')
-      
-      return NextResponse.json(
-        { 
-          error: 'Link de confirmação foi gerado, mas o Supabase não conseguiu enviar o email automaticamente.',
-          linkGenerated: true,
-          details: 'Por favor, verifique no Supabase Dashboard:',
-          checklist: [
-            '1. SMTP configurado em Project Settings → Auth → SMTP Settings (Enable Custom SMTP marcado)',
-            '2. Template de email configurado em Authentication → Email Templates → "Confirm signup" usando {{ .ConfirmationURL }}',
-            '3. "Enable email confirmations" habilitado em Authentication → URL Configuration',
-            '4. Verifique os logs do Supabase em Authentication → Logs para ver erros específicos de SMTP',
-            '5. O email do SMTP existe e a senha está correta no seu provedor (Hostinger, etc.)',
-            '6. Teste manualmente: Authentication → Users → Selecione usuário → "Send password recovery" (se não funcionar, problema é SMTP)'
-          ],
-          suggestion: 'O link foi gerado com sucesso. O problema é que o Supabase não está enviando o email. Verifique SMTP e logs do Supabase.',
-          methodsTried: ['generateLink', 'inviteUserByEmail', 'resend_signup', 'resend_email'],
-          note: 'Link foi gerado - problema é apenas no envio do email pelo Supabase'
-        },
-        { status: 500 }
-      )
-    }
-    
-    // Se nem o link foi gerado, problema mais sério
+    // Se chegou aqui, problema de configuração
     return NextResponse.json(
       { 
         error: 'Não foi possível gerar o link de confirmação nem enviar o email.',

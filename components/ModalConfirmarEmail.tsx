@@ -74,7 +74,7 @@ export default function ModalConfirmarEmail({ email, onConfirmado, onClose, obri
         console.error('❌ [AUTO] Resposta HTTP não OK:', response.status)
         const errorData = result.error || 'Erro ao enviar link de confirmação'
         setErro(errorData)
-        createNotification(`Erro: ${errorData}`, 'error')
+        createNotification(`Erro: ${errorData}`, 'warning')
       } else if (result.success || result.linkGenerated) {
         console.log('✅ [AUTO] Link enviado com sucesso!')
         setLinkEnviado(true)
@@ -83,7 +83,7 @@ export default function ModalConfirmarEmail({ email, onConfirmado, onClose, obri
       } else if (result.error) {
         console.error('❌ [AUTO] Erro ao enviar:', result.error)
         setErro(result.error)
-        createNotification(`Erro: ${result.error}`, 'error')
+        createNotification(`Erro: ${result.error}`, 'warning')
       } else {
         console.error('❌ [AUTO] Resposta inesperada:', result)
         setErro('Não foi possível enviar o link. Tente novamente ou entre em contato com o suporte.')

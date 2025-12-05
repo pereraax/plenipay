@@ -49,7 +49,6 @@ export default function EmailVerificadoGuard({ children, feature = 'esta funcion
         console.log('🔍 EmailVerificadoGuard - Verificando email:', {
           email: user.email,
           email_confirmed_at: emailConfirmedAt,
-          created_at: createdAt,
           isConfirmed,
           tipo: typeof emailConfirmedAt
         })

@@ -61,8 +61,11 @@ export async function POST(request: NextRequest) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
     const redirectTo = `${siteUrl}/auth/callback?next=/home`
     
+    let inviteError: any = null
+    let resendError: any = null
+    
     try {
-      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+      const { data: inviteData, error: err } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         email,
         {
           redirectTo: redirectTo,
@@ -72,9 +75,10 @@ export async function POST(request: NextRequest) {
         }
       )
       
-      if (inviteError) {
-        const errorMsg = inviteError.message.toLowerCase()
-        console.error('❌ Erro do inviteUserByEmail:', inviteError.message)
+      if (err) {
+        inviteError = err
+        const errorMsg = err.message.toLowerCase()
+        console.error('❌ Erro do inviteUserByEmail:', err.message)
         
         if (errorMsg.includes('already exists') || errorMsg.includes('already registered')) {
           console.log('⚠️ Usuário já existe (esperado)')
@@ -82,7 +86,7 @@ export async function POST(request: NextRequest) {
         } else {
           return NextResponse.json({
             success: false,
-            error: `inviteUserByEmail falhou: ${inviteError.message}`,
+            error: `inviteUserByEmail falhou: ${err.message}`,
             suggestion: 'Verifique SMTP no Supabase Dashboard'
           })
         }
@@ -96,21 +100,24 @@ export async function POST(request: NextRequest) {
         })
       }
     } catch (inviteException: any) {
+      inviteError = inviteException
       console.error('❌ Exceção no inviteUserByEmail:', inviteException.message)
     }
     
     // Teste 2: Tentar resend
     console.log('📤 TESTE 2: Tentando resend...')
-    const { createClient } = await import('./supabase/server')
+    const { createClient } = await import('@/lib/supabase/server')
     const supabase = await createClient()
     
-    const { data: resendData, error: resendError } = await supabase.auth.resend({
+    const { data: resendData, error: err2 } = await supabase.auth.resend({
       type: 'signup',
       email: email,
       options: {
         emailRedirectTo: redirectTo
       }
     })
+    
+    resendError = err2
     
     if (!resendError && resendData) {
       console.log('✅ resend executado com sucesso!')
