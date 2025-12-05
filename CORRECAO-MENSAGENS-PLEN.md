@@ -48,3 +48,5 @@ Todas as mensagens de bloqueio seguem o mesmo padrão:
 
 **O PLEN AI agora informa de forma direta e clara quando o usuário não tem acesso a uma função!**
 
+
+

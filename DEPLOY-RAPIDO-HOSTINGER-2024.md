@@ -113,3 +113,5 @@ openssl rand -base64 32
 - Verifique `ADMIN_JWT_SECRET`
 - Limpe cookies do navegador
 
+
+

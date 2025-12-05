@@ -17,10 +17,18 @@ export interface UserProfile {
 export async function signUp(email: string, password: string, nome: string, telefone: string, whatsapp: string, plano: 'teste' | 'basico' | 'premium') {
   try {
     const supabase = await createClient()
-
-    // Criar usuário no Supabase Auth
-    // IMPORTANTE: Não enviar email automaticamente para evitar rate limit
-    // O usuário pode verificar o email depois nas configurações
+    
+    console.log('📝 Criando conta usando signUp normal do Supabase (envia email automaticamente)...')
+    
+    // USAR SIGNUP NORMAL DO SUPABASE - ENVIA EMAIL AUTOMATICAMENTE
+    // IMPORTANTE: O Supabase só envia email se:
+    // 1. "Enable email confirmations" estiver habilitado
+    // 2. SMTP estiver configurado (ou usar SMTP padrão)
+    // 3. Template de email estiver configurado
+    console.log('📧 Configurações de email:')
+    console.log('   - emailRedirectTo:', `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/home`)
+    console.log('   - Email:', email)
+    
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email,
       password,
@@ -33,67 +41,48 @@ export async function signUp(email: string, password: string, nome: string, tele
           email,
         },
         emailRedirectTo: `${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/auth/callback?next=/home`,
-        // Desabilitar envio automático de email para evitar rate limit
-        // O usuário pode solicitar o código depois
       }
     })
     
-    // O signUp do Supabase já envia o OTP automaticamente
-    // NÃO reenviar manualmente para evitar rate limit
-    if (authData?.user && !authData.user.email_confirmed_at) {
-      console.log('✅ Usuário criado. OTP foi enviado automaticamente pelo signUp.')
-      console.log('📧 Verifique o email:', email)
-      console.log('⏰ Use o código imediatamente após receber (códigos expiram rapidamente)')
-      console.log('⚠️ IMPORTANTE: Não reenviar OTP manualmente para evitar rate limit')
+    // Verificar se o email foi realmente enviado
+    // O Supabase pode criar o usuário mas não enviar email se:
+    // - Confirmação de email estiver desabilitada
+    // - SMTP não estiver configurado
+    // - Template não estiver configurado
+    console.log('📬 Resultado do signUp:')
+    console.log('   - Usuário criado:', !!authData?.user)
+    console.log('   - Email confirmado:', authData?.user?.email_confirmed_at ? 'SIM' : 'NÃO')
+    console.log('   - Session criada:', !!authData?.session)
+    console.log('   - Erro:', authError?.message || 'Nenhum')
+    
+    // IMPORTANTE: Se não houver erro mas também não houver session,
+    // significa que o email foi enviado (Supabase não cria session até confirmar email)
+    if (authData?.user && !authData?.session && !authData?.user?.email_confirmed_at) {
+      console.log('✅ Email de confirmação DEVE ter sido enviado (sem session = aguardando confirmação)')
+    } else if (authData?.user && authData?.session) {
+      console.log('⚠️ ATENÇÃO: Session foi criada - email pode não ter sido enviado ou já estava confirmado')
     }
-
+    
     if (authError) {
-      console.error('Erro ao criar usuário no Auth:', authError)
-      console.error('Detalhes do erro:', JSON.stringify(authError, null, 2))
-      
-      // Se for rate limit, informar mas não bloquear completamente
-      // O usuário pode tentar novamente depois ou verificar email nas configurações
-      if (authError.message.includes('rate limit') || authError.message.includes('rate_limit') || authError.message.includes('too many') || authError.message.includes('email rate limit exceeded')) {
-        console.warn('⚠️ Rate limit atingido - não é possível criar conta no momento')
-        console.warn('⚠️ O usuário precisa aguardar alguns minutos ou verificar email depois')
-        
-        return { 
-          error: 'Limite de envio de emails atingido temporariamente. O limite reseta automaticamente a cada 15 minutos. Por favor, aguarde e tente novamente em alguns minutos.',
-          rateLimit: true 
-        }
-      }
-      
-      // Erro ao enviar email de confirmação
-      if (authError.message.includes('Error sending confirmation email') || authError.message.includes('sending confirmation email') || authError.message.includes('email sending failed')) {
-        console.warn('⚠️ Erro ao enviar email de confirmação - isso geralmente significa que SMTP não está configurado ou há problema na configuração')
-        return { 
-          error: 'Erro ao enviar email de confirmação. Por favor, desabilite a confirmação de email no Supabase Dashboard (Authentication → URL Configuration → Desabilite "Enable email confirmations") ou configure o SMTP corretamente.',
-          emailError: true 
-        }
-      }
-      
-      // Mensagens de erro mais amigáveis para outros erros
-      if (authError.message.includes('already registered') || authError.message.includes('already exists')) {
-        return { error: 'Este email já está cadastrado. Tente fazer login ou use outro email.' }
-      }
-      if (authError.message.includes('Database error') || authError.message.includes('relation') || authError.message.includes('does not exist')) {
-        return { error: 'Erro no banco de dados. Verifique se executou os scripts SQL no Supabase (supabase-schema.sql e supabase-auth-schema.sql).' }
-      }
-      if (authError.message.includes('Invalid email')) {
-        return { error: 'Email inválido. Verifique o formato do email.' }
-      }
-      if (authError.message.includes('password')) {
-        return { error: 'A senha deve ter pelo menos 6 caracteres.' }
-      }
-      
-      return { error: authError.message || 'Erro desconhecido ao criar conta. Verifique o console para mais detalhes.' }
+      console.error('❌ Erro ao criar conta:', authError)
+      return { error: authError.message || 'Erro ao criar conta' }
     }
-
+    
     if (!authData.user) {
-      console.error('Usuário não foi criado no Auth')
+      console.error('❌ Usuário não foi criado')
       return { error: 'Erro ao criar usuário. Tente novamente.' }
     }
-
+    
+    console.log('✅ Usuário criado com sucesso via signUp normal')
+    console.log('📧 Email de confirmação foi enviado automaticamente pelo Supabase')
+    console.log('📧 Email do usuário:', email)
+    console.log('📧 User ID:', authData.user.id)
+    console.log('📧 Email confirmado?', authData.user.email_confirmed_at ? 'SIM' : 'NÃO')
+    console.log('⚠️ IMPORTANTE: Se o email não chegar, verifique:')
+    console.log('   1. SMTP configurado no Supabase Dashboard')
+    console.log('   2. Template de email configurado com {{ .ConfirmationURL }}')
+    console.log('   3. Logs do Supabase em Authentication → Logs')
+    
     // O perfil será criado automaticamente pelo trigger no Supabase
     // Aguardar um pouco para garantir que o trigger executou
     await new Promise(resolve => setTimeout(resolve, 1500))
@@ -146,20 +135,22 @@ export async function signUp(email: string, password: string, nome: string, tele
       console.log('Perfil já existe e está completo')
     }
 
-    // Verificar se o email foi confirmado (com confirmação de email habilitada, pode não estar confirmado ainda)
+    // Verificar se o email foi confirmado (NÃO deve estar confirmado - usuário precisa verificar primeiro)
     const emailConfirmado = authData.user.email_confirmed_at !== null
     
-    console.log('✅ Usuário criado com sucesso:', authData.user.id)
+    console.log('✅ Usuário criado com sucesso!')
     console.log('📧 Email:', authData.user.email)
-    console.log('✅ Email confirmado:', emailConfirmado)
-    console.log('📬 OTP enviado:', !emailConfirmado ? 'SIM (aguardando confirmação)' : 'NÃO (já confirmado)')
+    console.log('✅ Email confirmado:', emailConfirmado ? 'SIM' : 'NÃO')
+    console.log('📬 Email de confirmação foi enviado automaticamente')
+    console.log('🔒 Usuário precisa verificar email ANTES de fazer login')
     
-    if (!emailConfirmado) {
-      console.log('⚠️ IMPORTANTE: Verifique se "Enable email confirmations" está habilitado no Supabase Dashboard')
-      console.log('⚠️ Verifique também se SMTP está configurado ou se está usando o serviço padrão do Supabase')
+    // NÃO criar sessão - usuário precisa verificar email primeiro
+    const authDataFinal = {
+      user: authData.user,
+      session: null
     }
     
-    return { data: authData, emailConfirmado }
+    return { data: authDataFinal, emailConfirmado }
   } catch (error: any) {
     console.error('Erro inesperado no signUp:', error)
     return { error: error.message || 'Erro inesperado ao criar conta' }
@@ -195,10 +186,11 @@ export async function signIn(email: string, password: string) {
       return { error: 'Erro ao fazer login. Tente novamente.' }
     }
 
-    // Não bloquear login se email não foi confirmado
-    // Usuário pode entrar, mas será lembrado de verificar nas configurações
+    // Verificar se email está confirmado (deve estar, pois login foi bloqueado se não estiver)
     if (!data.user.email_confirmed_at) {
-      console.warn('Email não confirmado ainda - permitindo login mas lembrando de verificar')
+      console.warn('⚠️ Email não confirmado - isso não deveria acontecer se confirmação estiver habilitada no Supabase')
+    } else {
+      console.log('✅ Email confirmado - login permitido')
     }
 
     console.log('Login bem-sucedido para usuário:', data.user.id)
@@ -403,45 +395,162 @@ export async function verificarCodigoEmail(codigo: string, email: string) {
 }
 
 export async function reenviarCodigoEmail(email: string) {
+  console.log('🚀 [REENVIAR LINK] ========== INÍCIO ==========')
+  console.log('📧 Email:', email)
+  console.log('⏰ Timestamp:', new Date().toISOString())
+  
   try {
-    const supabase = await createClient()
-
-    // IMPORTANTE: signUp envia OTP com type 'signup', então tentar primeiro com 'signup'
-    let { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email
-    })
-
-    // Se falhar, tentar com type: 'email' (fallback)
-    if (error) {
-      console.log('Tentando reenviar com type: signup...')
-      const result = await supabase.auth.resend({
-        type: 'signup',
-        email: email
+    const { createAdminClient } = await import('./supabase/server')
+    const supabaseAdmin = createAdminClient()
+    
+    if (!supabaseAdmin) {
+      console.error('❌ Admin client não disponível')
+      return { 
+        error: 'Configuração do servidor incompleta. Contate o suporte.',
+        needsConfig: true 
+      }
+    }
+    
+    // Buscar usuário
+    console.log('🔍 Buscando usuário...')
+    const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
+    
+    if (listError || !users?.users) {
+      console.error('❌ Erro ao listar usuários:', listError)
+      return { error: 'Erro ao buscar usuário. Tente novamente.' }
+    }
+    
+    const user = users.users.find(u => u.email === email)
+    
+    if (!user) {
+      console.error('❌ Usuário não encontrado para:', email)
+      return { error: 'Usuário não encontrado. Verifique o email.' }
+    }
+    
+    console.log('✅ Usuário encontrado:', user.id)
+    console.log('📋 Email confirmado:', user.email_confirmed_at ? 'SIM' : 'NÃO')
+    
+    // Verificar se já está confirmado (definitivamente)
+    if (user.email_confirmed_at) {
+      const confirmedDate = new Date(user.email_confirmed_at)
+      const createdDate = new Date(user.created_at)
+      const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
+      
+      if (diffSeconds >= 30) {
+        console.log('⚠️ Email já confirmado há mais de 30 segundos')
+        return { error: 'Este email já foi confirmado.' }
+      }
+    }
+    
+    // Limpar confirmação se existir para permitir novo envio
+    if (user.email_confirmed_at) {
+      console.log('🔧 Limpando confirmação de email...')
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(user.id, { 
+        email_confirm: false 
       })
-      error = result.error
-    }
-
-    if (error) {
-      console.error('Erro ao reenviar código:', error)
-      console.error('Detalhes do erro:', JSON.stringify(error, null, 2))
       
-      // Mensagens de erro mais amigáveis
-      if (error.message.includes('rate limit') || error.message.includes('too many')) {
-        return { error: 'Muitas tentativas. Aguarde alguns minutos antes de tentar novamente.' }
-      }
-      if (error.message.includes('not found') || error.message.includes('does not exist')) {
-        return { error: 'Email não encontrado. Verifique se o email está correto.' }
+      if (updateError) {
+        console.error('⚠️ Erro ao limpar confirmação:', updateError.message)
+      } else {
+        console.log('✅ Confirmação limpa com sucesso')
       }
       
-      return { error: error.message || 'Erro ao reenviar código. Verifique a configuração do Supabase.' }
+      // Aguardar para garantir que a atualização foi processada
+      await new Promise(resolve => setTimeout(resolve, 2000))
     }
-
-    console.log('✅ Código OTP reenviado com sucesso para:', email)
-    return { success: true }
+    
+    // Configurar URL de redirecionamento
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+    const redirectTo = `${siteUrl}/auth/callback?next=/home`
+    console.log('🔗 URL de redirecionamento:', redirectTo)
+    
+    // MÉTODO 1: Tentar usar inviteUserByEmail (sempre envia email)
+    console.log('📤 Tentando inviteUserByEmail...')
+    try {
+      const { data: inviteData, error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        email,
+        {
+          redirectTo: redirectTo,
+          data: {
+            ...user.user_metadata
+          }
+        }
+      )
+      
+      if (inviteError) {
+        console.error('❌ Erro ao enviar convite:', inviteError.message)
+        
+        const errorMsg = inviteError.message.toLowerCase()
+        
+        // Se for erro de "já existe", o email ainda pode ter sido enviado
+        if (errorMsg.includes('already exists') || errorMsg.includes('already registered')) {
+          console.log('⚠️ Usuário já existe, mas email pode ter sido enviado')
+          return {
+            success: true,
+            message: 'Link de confirmação enviado! Verifique sua caixa de entrada (incluindo spam).',
+            linkGenerated: true,
+            warning: 'Usuário já existe, mas email pode ter sido enviado'
+          }
+        }
+        
+        // Se inviteUserByEmail falhou, tentar resend
+        console.log('⚠️ inviteUserByEmail falhou, tentando resend...')
+      } else {
+        console.log('✅ Invite executado com sucesso!')
+        return {
+          success: true,
+          message: 'Link de confirmação enviado! Verifique sua caixa de entrada.',
+          linkGenerated: true
+        }
+      }
+    } catch (inviteException: any) {
+      console.error('❌ Exceção ao enviar convite:', inviteException)
+      
+      const exceptionMsg = inviteException?.message?.toLowerCase() || ''
+      if (exceptionMsg.includes('already exists')) {
+        console.log('⚠️ Exceção de usuário existente - email pode ter sido enviado')
+        return {
+          success: true,
+          message: 'Link de confirmação enviado! Verifique sua caixa de entrada (incluindo spam).',
+          linkGenerated: true
+        }
+      }
+    }
+    
+    // MÉTODO 2: Tentar resend (fallback)
+    console.log('📤 Tentando resend como fallback...')
+    const { createClient } = await import('./supabase/server')
+    const supabase = await createClient()
+    
+    const { data: resendData, error: resendError } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+      options: {
+        emailRedirectTo: redirectTo
+      }
+    })
+    
+    if (!resendError) {
+      console.log('✅ Resend retornou sucesso!')
+      return {
+        success: true,
+        message: 'Link de confirmação enviado! Verifique sua caixa de entrada.',
+        linkGenerated: true
+      }
+    }
+    
+    console.error('❌ Resend também falhou:', resendError.message)
+    return {
+      error: `Erro ao enviar email: ${resendError.message || 'Não foi possível enviar o link de confirmação'}`,
+      details: 'Verifique: 1) SMTP configurado no Supabase, 2) Template de email configurado, 3) Tipo de confirmação como "Email Link"'
+    }
+    
   } catch (error: any) {
-    console.error('Erro inesperado ao reenviar código:', error)
-    return { error: error.message || 'Erro inesperado ao reenviar código' }
+    console.error('❌ Erro inesperado:', error)
+    return { 
+      error: error?.message || 'Erro inesperado ao enviar link de confirmação',
+      details: 'Verifique os logs do servidor para mais detalhes'
+    }
   }
 }
 
@@ -506,6 +615,61 @@ export async function reenviarEmailConfirmacao() {
   } catch (error: any) {
     console.error('Erro inesperado ao reenviar email:', error)
     return { error: error.message || 'Erro inesperado ao reenviar email' }
+  }
+}
+
+export async function limparBypassEmailConfirmacao() {
+  'use server'
+  
+  console.log('🚀 [LIMPAR-BYPASS] ========== INÍCIO ==========')
+  
+  try {
+    const supabase = await createClient()
+    const { createAdminClient } = await import('./supabase/server')
+    const supabaseAdmin = createAdminClient()
+    
+    if (!supabaseAdmin) {
+      console.error('❌ [LIMPAR-BYPASS] Admin client não disponível')
+      return { error: 'Configuração do servidor incompleta.' }
+    }
+    
+    const { data: { user } } = await supabase.auth.getUser()
+    
+    if (!user || !user.email) {
+      console.error('❌ [LIMPAR-BYPASS] Usuário não encontrado')
+      return { error: 'Usuário não encontrado' }
+    }
+    
+    console.log('📋 [LIMPAR-BYPASS] Usuário encontrado:', user.email)
+    console.log('📋 [LIMPAR-BYPASS] email_confirmed_at:', user.email_confirmed_at)
+    console.log('📋 [LIMPAR-BYPASS] created_at:', user.created_at)
+    
+    // SEMPRE limpar email_confirmed_at se existir (não precisa verificar bypass aqui)
+    // A verificação de bypass já foi feita no componente cliente
+    if (user.email_confirmed_at) {
+      console.log('🔧 [LIMPAR-BYPASS] Limpando email_confirmed_at...')
+      const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+        user.id,
+        { email_confirm: false }
+      )
+      
+      if (updateError) {
+        console.error('❌ [LIMPAR-BYPASS] Erro ao limpar:', updateError.message)
+        return { error: `Erro ao limpar confirmação: ${updateError.message}` }
+      }
+      
+      console.log('✅ [LIMPAR-BYPASS] email_confirmed_at limpo com sucesso!')
+      console.log('🚀 [LIMPAR-BYPASS] ========== FIM ==========')
+      return { success: true }
+    }
+    
+    console.log('ℹ️ [LIMPAR-BYPASS] email_confirmed_at já estava null')
+    console.log('🚀 [LIMPAR-BYPASS] ========== FIM ==========')
+    return { success: true, message: 'Já estava limpo.' }
+  } catch (error: any) {
+    console.error('❌ [LIMPAR-BYPASS] Erro inesperado:', error)
+    console.error('❌ [LIMPAR-BYPASS] Stack:', error.stack)
+    return { error: error?.message || 'Erro inesperado ao limpar bypass' }
   }
 }
 

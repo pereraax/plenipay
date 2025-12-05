@@ -6,7 +6,7 @@ import { User } from '@/lib/types'
 import { obterUsuarios, criarUsuario, resetarTodosRegistros } from '@/lib/actions'
 import { Users, Settings as SettingsIcon, Plus, Edit, Trash2, X, User as UserIcon, LogOut, Key, Mail, Eye, EyeOff, AlertTriangle, RotateCcw, MessageCircle, Phone, Crown } from 'lucide-react'
 import { createNotification } from './NotificationBell'
-import { atualizarSenha, reenviarEmailConfirmacao, signOut } from '@/lib/auth'
+import { atualizarSenha, reenviarEmailConfirmacao, signOut, limparBypassEmailConfirmacao } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/client'
 import ModalConfirmacao from './ModalConfirmacao'
 import ModalConfirmarEmail from './ModalConfirmarEmail'
@@ -48,6 +48,8 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
   const [editandoCpf, setEditandoCpf] = useState(false)
   const [loadingCpf, setLoadingCpf] = useState(false)
   const [showModalVerificarEmail, setShowModalVerificarEmail] = useState(false)
+  const [bypassLimpo, setBypassLimpo] = useState(false) // Flag para evitar limpar bypass múltiplas vezes
+  const [carregandoPerfil, setCarregandoPerfil] = useState(false) // Flag para evitar múltiplos carregamentos simultâneos
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -59,41 +61,73 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
       setTabAtivo('geral')
     }
     carregarUsuarios()
-    // Carregar perfil apenas se estiver na aba de perfil
-    if (tab === 'perfil') {
+    // Carregar perfil apenas se estiver na aba de perfil e não houver erro de sessão
+    if (tab === 'perfil' && !userProfile?.error) {
       carregarPerfil()
     }
-  }, [searchParams])
+  }, [searchParams, userProfile?.error])
 
   // Listener de mudanças de autenticação
   useEffect(() => {
     const supabase = createClient()
+    let userUpdatedTimeout: NodeJS.Timeout | null = null
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       console.log('🔔 Auth state changed:', event, session?.user?.email || 'no user')
+      
+      // Limpar timeout anterior se existir
+      if (userUpdatedTimeout) {
+        clearTimeout(userUpdatedTimeout)
+        userUpdatedTimeout = null
+      }
+      
       if (event === 'SIGNED_IN' && session?.user) {
         console.log('✅ Usuário autenticado, recarregando perfil...')
-        carregarPerfil()
+        // Só recarregar se estiver na aba de perfil
+        if (tabAtivo === 'perfil') {
+          carregarPerfil()
+        }
       } else if (event === 'SIGNED_OUT') {
         console.log('👋 Usuário deslogado')
         setUserProfile(null)
       } else if (event === 'TOKEN_REFRESHED' && session?.user) {
-        console.log('🔄 Token atualizado, recarregando perfil...')
-        carregarPerfil()
+        // Token refresh acontece frequentemente - não recarregar automaticamente
+        console.log('🔄 Token atualizado (não recarregando perfil automaticamente)')
+      } else if (event === 'USER_UPDATED' && session?.user) {
+        console.log('🔄 Usuário atualizado (possível confirmação de email)')
+        // Só recarregar se estiver na aba de perfil e não estiver carregando
+        // Usar um delay maior e verificação mais rigorosa para evitar loops
+        if (tabAtivo === 'perfil' && !carregandoPerfil && !loadingProfile) {
+          userUpdatedTimeout = setTimeout(() => {
+            // Verificar novamente antes de recarregar
+            if (tabAtivo === 'perfil' && !carregandoPerfil && !loadingProfile) {
+              console.log('🔄 Recarregando perfil após USER_UPDATED...')
+              carregarPerfil()
+            }
+            userUpdatedTimeout = null
+          }, 2000) // Aumentar delay para 2 segundos
+        }
       }
     })
 
     return () => {
       subscription.unsubscribe()
+      if (userUpdatedTimeout) {
+        clearTimeout(userUpdatedTimeout)
+      }
     }
-  }, [])
+  }, [tabAtivo, carregandoPerfil, loadingProfile])
 
   // Recarregar perfil quando a aba de perfil for ativada
+  // CRÍTICO: Não incluir userProfile nas dependências para evitar loop infinito
+  // NÃO recarregar se já houver erro de sessão
   useEffect(() => {
-    if (tabAtivo === 'perfil' && !userProfile && !loadingProfile) {
+    if (tabAtivo === 'perfil' && !userProfile && !loadingProfile && !carregandoPerfil) {
       console.log('🔄 Recarregando perfil porque está na aba perfil e não há userProfile')
       carregarPerfil()
     }
-  }, [tabAtivo])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tabAtivo]) // Apenas tabAtivo como dependência
 
   // Debug: monitorar mudanças no userProfile
   useEffect(() => {
@@ -107,6 +141,13 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
   }, [userProfile, loadingProfile])
   
   const carregarPerfil = async () => {
+    // Evitar múltiplos carregamentos simultâneos
+    if (carregandoPerfil) {
+      console.log('⚠️ Carregamento de perfil já em andamento, ignorando...')
+      return
+    }
+    
+    setCarregandoPerfil(true)
     setLoadingProfile(true)
     try {
       const supabase = createClient()
@@ -130,42 +171,25 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
       
       if (userError) {
         console.error('❌ Erro ao buscar usuário:', userError.message)
-        // Se o erro for de sessão, tentar buscar usuário via API usando email armazenado
+        // Se o erro for de sessão, mostrar erro e parar
         if (userError.message.includes('session missing') || userError.message.includes('Auth session missing')) {
-          console.log('⚠️ Sessão não encontrada - tentando buscar usuário via API...')
-          
-          // Tentar buscar o email do localStorage ou cookies para usar na API
-          try {
-            // Tentar obter email do usuário de alguma forma (se estiver disponível)
-            // Por enquanto, vamos mostrar o erro mas com opção de tentar novamente
-            setUserProfile({
-              error: 'session_missing',
-              message: 'Sessão não encontrada. Por favor, faça login novamente ou tente recarregar a página.'
-            })
-            setLoadingProfile(false)
-            
-            // Tentar recarregar após um delay (pode ser que a sessão apareça)
-            setTimeout(() => {
-              console.log('🔄 Tentando recarregar perfil após delay...')
-              carregarPerfil()
-            }, 2000)
-            
-            return
-          } catch (apiError) {
-            console.error('❌ Erro ao tentar buscar via API:', apiError)
-            setUserProfile({
-              error: 'session_missing',
-              message: 'Sessão não encontrada. Por favor, faça login novamente.'
-            })
-            setLoadingProfile(false)
-            return
-          }
+          console.log('⚠️ Sessão não encontrada - parando tentativas de recarregar')
+          // Definir erro de sessão e parar completamente
+          setUserProfile({
+            error: 'session_missing',
+            message: 'Sessão não encontrada. Por favor, faça login novamente ou tente recarregar a página.'
+          })
+          setLoadingProfile(false)
+          setCarregandoPerfil(false)
+          // IMPORTANTE: Não tentar recarregar automaticamente
+          return
         }
         setUserProfile({
           error: 'load_failed',
           message: userError.message || 'Erro ao carregar perfil'
         })
         setLoadingProfile(false)
+        setCarregandoPerfil(false)
         return
       }
       
@@ -176,6 +200,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
           message: 'Usuário não encontrado. Por favor, faça login novamente.'
         })
         setLoadingProfile(false)
+        setCarregandoPerfil(false)
         return
       }
       
@@ -188,6 +213,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
         message: error.message || 'Erro inesperado ao carregar perfil'
       })
       setLoadingProfile(false)
+      setCarregandoPerfil(false)
     }
   }
   
@@ -290,54 +316,48 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
         emailConfirmedAt: emailConfirmedAt
       })
       
-      // Se email_confirmed_at existe e é muito próximo de created_at (menos de 5 segundos),
-      // provavelmente foi confirmado automaticamente pelo sistema (quando confirmação estava desabilitada)
-      // Nesse caso, considerar como não confirmado para forçar verificação manual
-      let emailConfirmedFinal = null
-      if (emailConfirmedAt && createdAt) {
-        try {
-          const confirmedDate = new Date(emailConfirmedAt)
-          const createdDate = new Date(createdAt)
-          const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
-          
-          console.log('🔍 Diferença entre criação e confirmação:', {
-            diffSeconds,
-            foiConfirmadoAutomaticamente: diffSeconds < 5
-          })
-          
-          // Se foi confirmado em menos de 5 segundos após criação, provavelmente foi automático
-          // Considerar como não confirmado para forçar verificação manual
-          if (diffSeconds >= 5) {
-            // Foi confirmado manualmente (tempo suficiente entre criação e confirmação)
-            emailConfirmedFinal = emailConfirmedAt
-          } else {
-            // Foi confirmado automaticamente, considerar como não confirmado
-            console.log('⚠️ Email foi confirmado automaticamente pelo sistema, forçando verificação manual')
-            emailConfirmedFinal = null
-          }
-        } catch (error) {
-          console.error('Erro ao comparar datas:', error)
-          // Em caso de erro, usar o valor original
-          emailConfirmedFinal = emailConfirmedAt
-        }
-      } else if (emailConfirmedAt) {
-        // Se não tem created_at para comparar, usar o valor original
-        emailConfirmedFinal = emailConfirmedAt
-      }
+      // SIMPLES: Se email_confirmed_at existe e não é null, está confirmado
+      // Não importa quando foi confirmado - se existe, foi confirmado via link do email
+      const emailConfirmedFinal = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== '' 
+        ? emailConfirmedAt 
+        : null
       
       console.log('🔍 Resultado final do email_confirmed_at:', {
+        valorOriginal: emailConfirmedAt,
         valorFinal: emailConfirmedFinal,
         isConfirmed: !!emailConfirmedFinal
       })
       
       // Garantir estrutura correta do objeto
+      // CRÍTICO: created_at deve SEMPRE vir do user, não do profile
       const finalProfileData = {
         id: profileData.id,
         email: profileData.email || '',
-        email_confirmed_at: emailConfirmedFinal,
-        created_at: profileData.created_at,
+        email_confirmed_at: emailConfirmedFinal, // Já processado (null se bypass)
+        created_at: user.created_at, // SEMPRE usar user.created_at
         updated_at: profileData.updated_at,
         profile: profileData.profile || null
+      }
+      
+      console.log('🔍 Dados finais do perfil:', {
+        email: finalProfileData.email,
+        email_confirmed_at: finalProfileData.email_confirmed_at,
+        created_at: finalProfileData.created_at,
+        isConfirmed: !!finalProfileData.email_confirmed_at,
+        userCreatedAt: user.created_at,
+        userEmailConfirmedAt: user.email_confirmed_at
+      })
+      
+      // Forçar refresh da sessão para garantir estado atualizado
+      try {
+        const { error: refreshError } = await supabase.auth.refreshSession()
+        if (refreshError) {
+          console.warn('⚠️ Erro ao fazer refresh da sessão:', refreshError)
+        } else {
+          console.log('✅ Sessão atualizada com sucesso')
+        }
+      } catch (refreshException) {
+        console.warn('⚠️ Exceção ao fazer refresh da sessão:', refreshException)
       }
       
       console.log('✅ Definindo userProfile:', {
@@ -350,10 +370,12 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
       
       setUserProfile(finalProfileData)
       setLoadingProfile(false)
+      setCarregandoPerfil(false)
     } catch (error: any) {
       console.error('❌ Erro ao continuar carregamento:', error)
       setUserProfile(null)
       setLoadingProfile(false)
+      setCarregandoPerfil(false)
     }
   }
 
@@ -389,14 +411,50 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
     setLoading(false)
   }
 
+  // Função para validar senha
+  const validarSenha = (senha: string): string[] => {
+    const errors: string[] = []
+    
+    if (senha.length < 8) {
+      errors.push('pelo menos 8 caracteres')
+    }
+    if (!/[A-Z]/.test(senha)) {
+      errors.push('uma letra maiúscula')
+    }
+    if (!/[a-z]/.test(senha)) {
+      errors.push('uma letra minúscula')
+    }
+    if (!/[0-9]/.test(senha)) {
+      errors.push('um número')
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(senha)) {
+      errors.push('um caractere especial (!@#$%...)')
+    }
+    
+    return errors
+  }
+
+  // Verificar requisitos da senha em tempo real
+  const requisitosSenha = {
+    minimo: novaSenha.length >= 8,
+    maiuscula: /[A-Z]/.test(novaSenha),
+    minuscula: /[a-z]/.test(novaSenha),
+    numero: /[0-9]/.test(novaSenha),
+    especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(novaSenha),
+  }
+  
+  const senhaValida = Object.values(requisitosSenha).every(Boolean)
+
   const handleRedefinirSenha = async () => {
     if (!senhaAtual || !novaSenha || !confirmarSenha) {
       createNotification('Preencha todos os campos', 'warning')
       return
     }
 
-    if (novaSenha.length < 6) {
-      createNotification('A nova senha deve ter pelo menos 6 caracteres', 'warning')
+    // Validação de senha mais robusta
+    const senhaErrors = validarSenha(novaSenha)
+    if (senhaErrors.length > 0) {
+      createNotification('A nova senha não atende aos requisitos. Verifique as regras abaixo.', 'warning')
       return
     }
 
@@ -673,45 +731,18 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                           <span className="text-sm font-medium text-brand-midnight dark:text-brand-clean/70">Email confirmado:</span>
                           <div className="flex items-center gap-3">
                             {(() => {
-                              // CRÍTICO: Se email foi confirmado muito rapidamente após criação (menos de 30 segundos),
-                              // provavelmente foi pelo bypass automático e deve ser considerado NÃO confirmado
+                              // CRÍTICO: O userProfile.email_confirmed_at já foi processado na função continuarCarregamentoPerfil
+                              // Se for null, significa que foi detectado como bypass ou não está confirmado
+                              // SEMPRE usar o valor já processado, não reprocessar aqui
                               
                               const emailConfirmedAt = userProfile.email_confirmed_at
-                              const createdAt = userProfile.created_at
+                              const isConfirmed = !!emailConfirmedAt
                               
-                              let isConfirmed = false
-                              
-                              if (!emailConfirmedAt) {
-                                // Email definitivamente não está confirmado
-                                isConfirmed = false
-                              } else if (emailConfirmedAt && createdAt) {
-                                try {
-                                  const confirmedDate = new Date(emailConfirmedAt)
-                                  const createdDate = new Date(createdAt)
-                                  const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
-                                  
-                                  // CRÍTICO: Se foi confirmado em menos de 30 segundos, foi provavelmente pelo bypass
-                                  // Considerar como NÃO confirmado para forçar verificação manual
-                                  // Se foi confirmado em 30+ segundos, provavelmente foi manual (contar como confirmado)
-                                  isConfirmed = diffSeconds >= 30
-                                  
-                                  console.log('🔍 Verificação de confirmação:', {
-                                    diffSeconds,
-                                    isConfirmed,
-                                    motivo: diffSeconds < 30 ? 'confirmado pelo bypass (não contar)' : 'confirmado manualmente'
-                                  })
-                                } catch (error) {
-                                  console.error('Erro ao comparar datas:', error)
-                                  // Em caso de erro, considerar como não confirmado por segurança
-                                  isConfirmed = false
-                                }
-                              }
-                              
-                              console.log('🔍 Status de confirmação de email no perfil:', {
+                              console.log('🔍 Renderização - Status de confirmação:', {
                                 emailConfirmedAt,
-                                createdAt,
                                 isConfirmed,
-                                tipo: typeof emailConfirmedAt
+                                tipo: typeof emailConfirmedAt,
+                                valorBruto: userProfile.email_confirmed_at
                               })
                               
                               return (
@@ -862,63 +893,6 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                             </div>
                           </>
                         )}
-                        
-                        {/* Botão de Simulação de Pagamento (apenas para testes) */}
-                        {process.env.NODE_ENV === 'development' && (
-                          <div className="pt-4 border-t border-brand-midnight/10">
-                            <p className="text-xs text-brand-midnight/50 dark:text-brand-clean/50 mb-2">
-                              🧪 Modo Desenvolvimento
-                            </p>
-                            <div className="flex gap-2">
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch('/api/pagamento/simular', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ plano: 'basico' }),
-                                    })
-                                    const data = await response.json()
-                                    if (response.ok) {
-                                      createNotification('Plano Básico simulado com sucesso!', 'success')
-                                      setTimeout(() => window.location.reload(), 1000)
-                                    } else {
-                                      createNotification('Erro: ' + data.error, 'warning')
-                                    }
-                                  } catch (error: any) {
-                                    createNotification('Erro ao simular pagamento', 'warning')
-                                  }
-                                }}
-                                className="px-3 py-1.5 bg-blue-500 text-white rounded-lg text-xs font-medium hover:bg-blue-600 transition-smooth"
-                              >
-                                Simular Básico
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  try {
-                                    const response = await fetch('/api/pagamento/simular', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
-                                      body: JSON.stringify({ plano: 'premium' }),
-                                    })
-                                    const data = await response.json()
-                                    if (response.ok) {
-                                      createNotification('Plano Premium simulado com sucesso!', 'success')
-                                      setTimeout(() => window.location.reload(), 1000)
-                                    } else {
-                                      createNotification('Erro: ' + data.error, 'warning')
-                                    }
-                                  } catch (error: any) {
-                                    createNotification('Erro ao simular pagamento', 'warning')
-                                  }
-                                }}
-                                className="px-3 py-1.5 bg-purple-500 text-white rounded-lg text-xs font-medium hover:bg-purple-600 transition-smooth"
-                              >
-                                Simular Premium
-                              </button>
-                            </div>
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -973,7 +947,13 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                                 type={showNovaSenha ? 'text' : 'password'}
                                 value={novaSenha}
                                 onChange={(e) => setNovaSenha(e.target.value)}
-                                className="w-full px-4 py-3 bg-white dark:bg-brand-midnight border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth pr-12 text-brand-midnight dark:text-brand-clean"
+                                className={`w-full px-4 py-3 bg-white dark:bg-brand-midnight border rounded-xl focus:outline-none transition-smooth pr-12 text-brand-midnight dark:text-brand-clean ${
+                                  novaSenha && !senhaValida
+                                    ? 'border-red-500/50 focus:border-red-500'
+                                    : novaSenha && senhaValida
+                                    ? 'border-green-500/50 focus:border-green-500'
+                                    : 'border-gray-300 focus:border-brand-aqua'
+                                }`}
                                 placeholder="Digite a nova senha"
                               />
                               <button
@@ -983,6 +963,33 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                               >
                                 {showNovaSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                               </button>
+                            </div>
+                            
+                            {/* Lista de requisitos da senha */}
+                            <div className="mt-2 p-3 bg-gray-50 dark:bg-brand-midnight/30 rounded-lg border border-gray-200 dark:border-white/10">
+                              <p className="text-xs font-semibold text-brand-midnight dark:text-brand-clean mb-2">Requisitos da senha:</p>
+                              <ul className="space-y-1 text-xs">
+                                <li className={`flex items-center gap-2 ${requisitosSenha.minimo ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-brand-clean/60'}`}>
+                                  <span>{requisitosSenha.minimo ? '✓' : '○'}</span>
+                                  <span>Pelo menos 8 caracteres</span>
+                                </li>
+                                <li className={`flex items-center gap-2 ${requisitosSenha.maiuscula ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-brand-clean/60'}`}>
+                                  <span>{requisitosSenha.maiuscula ? '✓' : '○'}</span>
+                                  <span>Uma letra maiúscula (A-Z)</span>
+                                </li>
+                                <li className={`flex items-center gap-2 ${requisitosSenha.minuscula ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-brand-clean/60'}`}>
+                                  <span>{requisitosSenha.minuscula ? '✓' : '○'}</span>
+                                  <span>Uma letra minúscula (a-z)</span>
+                                </li>
+                                <li className={`flex items-center gap-2 ${requisitosSenha.numero ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-brand-clean/60'}`}>
+                                  <span>{requisitosSenha.numero ? '✓' : '○'}</span>
+                                  <span>Um número (0-9)</span>
+                                </li>
+                                <li className={`flex items-center gap-2 ${requisitosSenha.especial ? 'text-green-500 dark:text-green-400' : 'text-gray-500 dark:text-brand-clean/60'}`}>
+                                  <span>{requisitosSenha.especial ? '✓' : '○'}</span>
+                                  <span>Um caractere especial (!@#$%...)</span>
+                                </li>
+                              </ul>
                             </div>
                           </div>
 
@@ -995,7 +1002,13 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                                 type={showConfirmarSenha ? 'text' : 'password'}
                                 value={confirmarSenha}
                                 onChange={(e) => setConfirmarSenha(e.target.value)}
-                                className="w-full px-4 py-3 bg-white dark:bg-brand-midnight border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth pr-12 text-brand-midnight dark:text-brand-clean"
+                                className={`w-full px-4 py-3 bg-white dark:bg-brand-midnight border-2 rounded-xl focus:outline-none transition-smooth pr-12 text-brand-midnight dark:text-brand-clean ${
+                                  confirmarSenha && novaSenha && novaSenha !== confirmarSenha
+                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50'
+                                    : confirmarSenha && novaSenha && novaSenha === confirmarSenha
+                                    ? 'border-green-500 focus:border-green-500 focus:ring-green-500/50'
+                                    : 'border-gray-300 focus:border-brand-aqua'
+                                }`}
                                 placeholder="Confirme a nova senha"
                               />
                               <button
@@ -1006,6 +1019,20 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                                 {showConfirmarSenha ? <EyeOff size={20} /> : <Eye size={20} />}
                               </button>
                             </div>
+                            {confirmarSenha && novaSenha && novaSenha !== confirmarSenha && (
+                              <div className="mt-2 p-2 bg-red-500/10 dark:bg-red-500/20 border border-red-500/30 rounded-lg">
+                                <p className="text-sm text-red-500 dark:text-red-400 flex items-center gap-2 font-medium">
+                                  <span>⚠️</span>
+                                  <span>As senhas não coincidem</span>
+                                </p>
+                              </div>
+                            )}
+                            {confirmarSenha && novaSenha && novaSenha === confirmarSenha && (
+                              <p className="mt-2 text-sm text-green-500 dark:text-green-400 flex items-center gap-2">
+                                <span>✓</span>
+                                <span>Senhas coincidem</span>
+                              </p>
+                            )}
                           </div>
 
                           <div className="flex gap-2">
@@ -1356,6 +1383,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
       {/* Modal de Verificação de Email */}
       {showModalVerificarEmail && userProfile?.email && (
         <ModalConfirmarEmail
+          key={`verify-email-${userProfile.email}-${showModalVerificarEmail}`}
           email={userProfile.email}
           obrigatorio={false}
           onConfirmado={() => {

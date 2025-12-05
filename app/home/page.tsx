@@ -1,6 +1,6 @@
 import Sidebar from '@/components/Sidebar'
 import MobileMenu, { MenuButton } from '@/components/MobileMenu'
-import DashboardHorizontal from '@/components/DashboardHorizontal'
+import DashboardHorizontalWrapper from '@/components/DashboardHorizontalWrapper'
 import QuickActionCard from '@/components/QuickActionCard'
 import SupportPanel from '@/components/SupportPanel'
 import NotificationBell from '@/components/NotificationBell'
@@ -8,6 +8,7 @@ import UserProfileMenu from '@/components/UserProfileMenu'
 import BannerInformacoes from '@/components/BannerInformacoes'
 import AvisosAdmin from '@/components/AvisosAdmin'
 import AvisoEmailNaoConfirmado from '@/components/AvisoEmailNaoConfirmado'
+import EmailConfirmadoSucessoWrapper from '@/components/EmailConfirmadoSucessoWrapper'
 import Logo from '@/components/Logo'
 import { Suspense } from 'react'
 
@@ -53,19 +54,11 @@ export default async function HomePage() {
           {/* Aviso de Email Não Confirmado */}
           <AvisoEmailNaoConfirmado />
 
-          {/* Dashboard Horizontal com Suspense - SEMPRE VISÍVEL */}
-          <Suspense fallback={
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className="bg-white dark:bg-brand-royal rounded-xl p-4 border border-gray-200 dark:border-white/10 animate-pulse">
-                  <div className="h-4 bg-gray-200 dark:bg-white/20 rounded w-24 mb-2"></div>
-                  <div className="h-8 bg-gray-200 dark:bg-white/20 rounded w-32"></div>
-                </div>
-              ))}
-            </div>
-          }>
-            <DashboardHorizontal />
-          </Suspense>
+          {/* Popup de sucesso quando email é confirmado */}
+          <EmailConfirmadoSucessoWrapper />
+
+          {/* Dashboard Horizontal - ATUALIZA AUTOMATICAMENTE A CADA 10 SEGUNDOS */}
+          <DashboardHorizontalWrapper />
 
           {/* Conteúdo Principal - SEMPRE VISÍVEL, mas desabilitado se email não confirmado */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

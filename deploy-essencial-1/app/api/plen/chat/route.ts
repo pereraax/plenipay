@@ -1,0 +1,1245 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { createClient } from '@/lib/supabase/server'
+import { obterDividas, obterRegistros, obterEstatisticas, criarRegistro } from '@/lib/actions'
+import { obterPlanoUsuario, obterFeaturesUsuario } from '@/lib/plano'
+import { format, startOfWeek, endOfWeek, subDays } from 'date-fns'
+import { ptBR } from 'date-fns/locale/pt-BR'
+
+// Função para verificar se email está confirmado
+async function verificarEmailConfirmado(user: any): Promise<boolean> {
+  const emailConfirmedAt = user.email_confirmed_at
+  const createdAt = user.created_at
+  
+  if (!emailConfirmedAt) {
+    return false
+  }
+  
+  if (emailConfirmedAt && createdAt) {
+    try {
+      const confirmedDate = new Date(emailConfirmedAt)
+      const createdDate = new Date(createdAt)
+      const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
+      
+      // Se foi confirmado em menos de 30 segundos, foi provavelmente pelo bypass
+      // Considerar como NÃO confirmado
+      return diffSeconds >= 30
+    } catch (error) {
+      return false
+    }
+  }
+  
+  return !!emailConfirmedAt
+}
+
+// Função para verificar permissões antes de executar comando
+// IMPORTANTE: Verifica em sequência:
+// 1. Primeiro: Email confirmado (obrigatório para TODAS as funcionalidades)
+// 2. Depois: Plano do usuário (verifica se a funcionalidade específica está disponível no plano)
+async function verificarPermissoes(
+  user: any,
+  tipoComando: string,
+  descricao?: string
+): Promise<{ permitido: boolean; motivo?: string }> {
+  // ===== ETAPA 1: VERIFICAR SE EMAIL ESTÁ CONFIRMADO =====
+  // Esta é a verificação PRIMÁRIA - sem email confirmado, nenhuma funcionalidade funciona
+  const emailConfirmado = await verificarEmailConfirmado(user)
+  
+  if (!emailConfirmado) {
+    // Determinar tipo de registro para mensagem mais específica
+    let tipoRegistro = 'o registro'
+    if (tipoComando === 'registrar_divida') {
+      tipoRegistro = 'a dívida'
+    } else if (tipoComando === 'registrar_entrada') {
+      tipoRegistro = 'a entrada'
+    } else if (tipoComando === 'registrar_gasto') {
+      tipoRegistro = 'o gasto'
+    }
+    
+    return {
+      permitido: false,
+      motivo: `❌ **Não foi possível criar ${tipoRegistro}.** Seu email ainda não foi confirmado. Você precisa confirmar seu email antes de criar qualquer registro. Acesse **Configurações → Perfil** e clique em "Verificar agora" para confirmar seu email.`
+    }
+  }
+  
+  // ===== ETAPA 2: VERIFICAR PLANO E FEATURES =====
+  // Se chegou aqui, o email está confirmado. Agora verifica se o plano permite a funcionalidade
+  const features = await obterFeaturesUsuario()
+  const plano = await obterPlanoUsuario()
+  
+  // Verificar criação de dívidas
+  // IMPORTANTE: Mesmo com email confirmado, verifica se o plano permite criar dívidas
+  if (tipoComando === 'registrar_divida') {
+    if (!features.podeCriarDividas) {
+      return {
+        permitido: false,
+        motivo: `❌ **Não foi possível criar a dívida.** Para criar dívidas, você precisa fazer upgrade do seu plano. Você está no plano **${plano.toUpperCase()}**, mas criar dívidas está disponível apenas para planos **Básico** ou **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+      }
+    }
+  }
+  
+  // Verificar criação de salário
+  // IMPORTANTE: Mesmo com email confirmado, verifica se o plano permite registrar salários
+  if (tipoComando === 'registrar_entrada') {
+    const descricaoLower = (descricao || '').toLowerCase()
+    if (descricaoLower.includes('salário') || descricaoLower.includes('salario') || descricaoLower.includes('salá')) {
+      if (!features.podeRegistrarSalario) {
+        return {
+          permitido: false,
+          motivo: `❌ **Não foi possível registrar o salário.** Para registrar salários, você precisa fazer upgrade do seu plano. Você está no plano **${plano.toUpperCase()}**, mas registrar salários está disponível apenas para planos **Básico** ou **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+        }
+      }
+    }
+  }
+  
+  // Verificar criação de empréstimos
+  // IMPORTANTE: Mesmo com email confirmado, verifica se o plano permite criar empréstimos
+  if (tipoComando === 'registrar_emprestimo') {
+    if (!features.podeCriarEmprestimos) {
+      return {
+        permitido: false,
+        motivo: `❌ **Não foi possível criar o empréstimo.** Para criar empréstimos, você precisa fazer upgrade para o plano **Premium**. Você está no plano **${plano.toUpperCase()}**, mas criar empréstimos está disponível apenas no plano **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+      }
+    }
+  }
+  
+  // Se chegou até aqui, passou por TODAS as verificações:
+  // ✅ Email confirmado
+  // ✅ Plano permite a funcionalidade
+  return { permitido: true }
+}
+
+// Função para processar comandos em linguagem natural
+function processarComando(mensagem: string, dados: any) {
+  const msgLower = mensagem.toLowerCase().trim()
+  
+  // Padrões de comandos
+  const padroes = {
+    // Consultas - Melhorado para capturar mais variações de perguntas sobre dívidas
+    dividas: /(dividas?|dívidas?|quais.*dividas?|mostre.*dividas?|lista.*dividas?|qual.*total.*dividas?|quanto.*dividas?|quantas.*dividas?|qual.*divida|quanto.*devo|quanto.*tenho.*divida|total.*dividas?|divida.*total)/i,
+    gastosSemana: /(gastos?.*semana|quanto.*gastou.*semana|gastou.*semana|despesas?.*semana)/i,
+    gastosMes: /(gastos?.*m[eê]s|quanto.*gastou.*m[eê]s|gastou.*m[eê]s|despesas?.*m[eê]s)/i,
+    totalEntradas: /(entradas?|receitas?|quanto.*recebeu|total.*entradas?)/i,
+    totalSaidas: /(sa[ií]das?|despesas?|quanto.*gastou|total.*sa[ií]das?)/i,
+    
+    // Registros - Padrões mais flexíveis
+    registrarGasto: /(registrar|adicionar|inserir|cadastrar|pago|paguei|pagar|gastei|gastar|comprei|comprar).*(gasto|despesa|sa[ií]da|compra|pagamento|conta|conta de)/i,
+    pagamentoDireto: /(pago|paguei|pagar|pague)\s+.*[\d.,]+\s*(reais?|r\$)?|[\d.,]+\s*(reais?|r\$)?.*(pago|paguei|pagar|conta)/i,
+    registrarEntrada: /(registrar|adicionar|inserir|cadastrar|recebi|receber).*(entrada|receita|sal[aá]rio|dinheiro.*recebido)/i,
+    registrarDivida: /(registrar|adicionar|inserir|cadastrar|criar|tenho|tenho uma|preciso|preciso registrar|devendo|devo|deve).*(divida|dívida|deve|devo|devendo|pagar|pago)/i,
+  }
+
+    // CRÍTICO: Verificar comandos de REGISTRO ANTES de consultas
+    // Isso evita que "registrar dívida" seja interpretado como "consultar dívidas"
+    
+    // CRÍTICO: Se é comando de REGISTRO de dívida, marcar para não tratar como consulta
+    // A extração de valor e descrição acontecerá mais abaixo
+    const isRegistroDivida = padroes.registrarDivida.test(msgLower)
+    
+    // Verificar outros comandos de registro ANTES de consultas
+    if (padroes.registrarGasto.test(msgLower) || padroes.pagamentoDireto.test(msgLower)) {
+      // Processar registro de gasto (lógica existente continuará abaixo)
+    }
+    
+    if (padroes.registrarEntrada.test(msgLower)) {
+      // Processar registro de entrada (lógica existente continuará abaixo)
+    }
+    
+    // Só depois verificar consultas (mas NÃO se for comando de registro)
+    if (padroes.dividas.test(msgLower) && !isRegistroDivida) {
+      return { tipo: 'consultar_dividas', dados }
+    }
+    
+    if (padroes.gastosSemana.test(msgLower)) {
+      return { tipo: 'gastos_semana', dados }
+    }
+    
+    if (padroes.gastosMes.test(msgLower)) {
+      return { tipo: 'gastos_mes', dados }
+    }
+    
+    if (padroes.totalEntradas.test(msgLower)) {
+      return { tipo: 'total_entradas', dados }
+    }
+    
+    if (padroes.totalSaidas.test(msgLower)) {
+      return { tipo: 'total_saidas', dados }
+    }
+
+  // Extrair valor - padrões mais flexíveis (captura valores em qualquer posição)
+  const valorPatterns = [
+    /r\$\s*([\d.,]+)/i,
+    /([\d.,]+)\s*reais?/i,
+    /([\d.,]+)\s*r\$/i,
+    /valor\s*(?:de|de\s+)?([\d.,]+)/i,
+    /\b(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*(?:reais?|r\$|de)?\b/i, // Números soltos seguidos de "reais" ou "de"
+  ]
+  
+  let valor: number | null = null
+  let todosValores: number[] = []
+  
+  // Primeiro, tentar padrões específicos
+  for (const pattern of valorPatterns) {
+    const matches = Array.from(mensagem.matchAll(new RegExp(pattern, 'gi')))
+    for (const match of matches) {
+      const valorStr = match[1] || match[0]
+      const valorLimpo = valorStr.replace(/\./g, '').replace(',', '.')
+      const valorNum = parseFloat(valorLimpo)
+      if (!isNaN(valorNum) && valorNum > 0 && valorNum < 10000000) {
+        todosValores.push(valorNum)
+      }
+    }
+  }
+  
+  // Se não encontrou com padrões específicos, procurar qualquer número no texto
+  if (todosValores.length === 0) {
+    // Padrão mais simples: qualquer número de 1 a 6 dígitos
+    const numeroPattern = /\b(\d{1,6})\b/g
+    const matches = Array.from(mensagem.matchAll(numeroPattern))
+    for (const match of matches) {
+      const valorStr = match[1]
+      const valorNum = parseFloat(valorStr)
+      if (!isNaN(valorNum) && valorNum > 0 && valorNum < 10000000) {
+        todosValores.push(valorNum)
+      }
+    }
+  }
+  
+  // Pegar o maior valor encontrado (provavelmente é o valor da transação)
+  if (todosValores.length > 0) {
+    valor = Math.max(...todosValores)
+    console.log('💰 [PLEN] Valor extraído:', valor, 'de:', todosValores)
+  } else {
+    console.log('⚠️ [PLEN] Nenhum valor encontrado na mensagem:', mensagem)
+  }
+
+  // Detectar se é gasto/pagamento (palavras-chave mais amplas)
+  // Primeiro verificar se tem valor, depois verificar palavras-chave
+  const temPalavraPagamento = /(pago|paguei|pagar|pague|gastei|gastar|comprei|comprar|conta de|paguei a|paguei o|pagamento|conta)/i.test(msgLower)
+  const isGasto = padroes.registrarGasto.test(msgLower) || 
+                  padroes.pagamentoDireto.test(msgLower) ||
+                  temPalavraPagamento
+
+  // Detectar se é entrada (palavras-chave)
+  const isEntrada = padroes.registrarEntrada.test(msgLower) ||
+                    /(recebi|receber|ganhei|ganhar|salário|entrada de|receita)/i.test(msgLower)
+
+  // Detectar se é dívida ANTES de entrada/gasto (prioridade)
+  const isDivida = padroes.registrarDivida.test(msgLower) ||
+                   /(tenho|tenho uma|preciso|preciso registrar|devendo|devo|deve).*(divida|dívida|pagar|pago)/i.test(msgLower) ||
+                   /(divida|dívida).*(de|de\s+)?[\d.,]+\s*(?:reais?|r\$)/i.test(msgLower)
+  
+  // Se encontrou valor E é dívida, tratar como registro de dívida (PRIORIDADE)
+  if (isDivida && valor) {
+    // Extrair descrição da dívida
+    let descricao = ''
+    
+    // Padrão 1: "tenho uma dívida de X de [descrição]"
+    const dividaDeMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+de\s+([^,\.]+)/i)
+    if (dividaDeMatch && dividaDeMatch[1]) {
+      descricao = dividaDeMatch[1].trim()
+    } else {
+      // Padrão 2: "tenho uma dívida de X para [descrição]"
+      const dividaParaMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+para\s+([^,\.]+)/i)
+      if (dividaParaMatch && dividaParaMatch[1]) {
+        descricao = dividaParaMatch[1].trim()
+      } else {
+        // Padrão 3: "tenho uma dívida de X com [descrição]"
+        const dividaComMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+com\s+([^,\.]+)/i)
+        if (dividaComMatch && dividaComMatch[1]) {
+          descricao = dividaComMatch[1].trim()
+        } else {
+          // Padrão 4: pegar tudo após o número
+          const partes = mensagem.split(/[\d.,]+\s*(?:reais?|r\$)?/i)
+          if (partes.length > 1) {
+            descricao = partes[1].trim()
+            descricao = descricao.replace(/^(?:registrar|adicionar|inserir|cadastrar|criar|divida|dívida|deve|devendo|tenho|tenho uma|preciso|preciso registrar|de|para|com|com\s+)\s*/i, '')
+          }
+        }
+      }
+    }
+    
+    // Se não encontrou descrição, criar uma genérica
+    if (!descricao || descricao.length < 3) {
+      descricao = `Dívida de R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    } else {
+      descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1)
+    }
+    
+    return {
+      tipo: 'registrar_divida',
+      dados: {
+        valor,
+        descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao,
+        tipo: 'divida'
+      }
+    }
+  }
+
+  // Se encontrou valor E é entrada (recebi/recebeu), tratar como registro de entrada
+  if (valor && isEntrada && !temPalavraPagamento && !isDivida) {
+    // Extrair nome da pessoa - múltiplos padrões para "recebi X de [nome]"
+    let descricao = ''
+    
+    // Padrão 1: "recebi X de [nome]" ou "recebeu X de [nome]"
+    const recebiDeMatch = mensagem.match(/(?:recebi|recebeu|ganhei|ganhar)\s+.*?[\d.,]+\s*(?:reais?|r\$)?\s+de\s+([A-Za-zÀ-ÿ\s]+?)(?:\s|$|,|\.)/i)
+    if (recebiDeMatch && recebiDeMatch[1]) {
+      const nome = recebiDeMatch[1].trim()
+      // Limpar o nome (remover palavras desnecessárias)
+      const nomeLimpo = nome.replace(/\s+(?:reais?|r\$|de|para|com|em|no|na|a|o)\s+/gi, ' ').trim()
+      if (nomeLimpo.length > 0 && nomeLimpo.length < 50) {
+        // Capitalizar primeira letra
+        const nomeFormatado = nomeLimpo.charAt(0).toUpperCase() + nomeLimpo.slice(1).toLowerCase()
+        descricao = `Recebeu de ${nomeFormatado}`
+      }
+    }
+    
+    // Padrão 2: "recebi X [nome]" (sem "de")
+    if (!descricao) {
+      const recebiMatch = mensagem.match(/(?:recebi|recebeu|ganhei|ganhar)\s+.*?[\d.,]+\s*(?:reais?|r\$)?\s+([A-Za-zÀ-ÿ]+)(?:\s|$|,|\.)/i)
+      if (recebiMatch && recebiMatch[1]) {
+        const nome = recebiMatch[1].trim()
+        if (nome.length > 1 && nome.length < 50 && !/(?:reais?|r\$|de|para|com|em|no|na|a|o)/i.test(nome)) {
+          const nomeFormatado = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()
+          descricao = `Recebeu de ${nomeFormatado}`
+        }
+      }
+    }
+    
+    // Padrão 3: "de [nome]" genérico (fallback)
+    if (!descricao) {
+      const deMatch = mensagem.match(/(?:de|para|com)\s+([A-Za-zÀ-ÿ]+)(?:\s|$|,|\.)/i)
+      if (deMatch && deMatch[1]) {
+        const nome = deMatch[1].trim()
+        if (nome.length > 1 && nome.length < 50 && !/(?:reais?|r\$|de|para|com|em|no|na|a|o)/i.test(nome)) {
+          const nomeFormatado = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()
+          descricao = `Recebeu de ${nomeFormatado}`
+        }
+      }
+    }
+    
+    // Se não encontrou nome, criar descrição genérica
+    if (!descricao || descricao.length < 3) {
+      descricao = `Entrada de R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    }
+    
+    return {
+      tipo: 'registrar_entrada',
+      dados: {
+        valor,
+        descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao,
+        tipo: 'entrada'
+      }
+    }
+  }
+
+  // Se encontrou valor E tem palavra de pagamento/gasto, tratar como registro de gasto
+  if (valor && temPalavraPagamento && !isEntrada && !isDivida) {
+    // Extrair categoria com base em palavras-chave
+    const categoriaMap: { [key: string]: string } = {
+      'luz': 'moradia',
+      'energia': 'moradia',
+      'água': 'moradia',
+      'agua': 'moradia',
+      'internet': 'moradia',
+      'telefone': 'moradia',
+      'aluguel': 'moradia',
+      'condomínio': 'moradia',
+      'supermercado': 'alimentação',
+      'mercado': 'alimentação',
+      'comida': 'alimentação',
+      'alimentação': 'alimentação',
+      'alimentacao': 'alimentação',
+      'restaurante': 'alimentação',
+      'combustível': 'transporte',
+      'combustivel': 'transporte',
+      'gasolina': 'transporte',
+      'uber': 'transporte',
+      'táxi': 'transporte',
+      'farmacia': 'saúde',
+      'farmácia': 'saúde',
+      'remédio': 'saúde',
+      'remedio': 'saúde',
+      'médico': 'saúde',
+      'medico': 'saúde',
+      'hospital': 'saúde',
+      'conta de': 'moradia',
+      'conta': 'moradia',
+    }
+    
+    let categoria = 'outros'
+    for (const [palavra, cat] of Object.entries(categoriaMap)) {
+      if (msgLower.includes(palavra)) {
+        categoria = cat
+        break
+      }
+    }
+    
+    // Extrair descrição - padrões mais flexíveis
+    let descricao = ''
+    
+    // Remover palavras de ação e valores para pegar apenas a descrição
+    let mensagemLimpa = msgLower
+      .replace(/(?:pago|paguei|pagar|pague|gastei|gastar|comprei|comprar|registrar|adicionar|cadastrar)\s*/gi, '')
+      .replace(/[\d.,]+\s*(?:reais?|r\$)?/gi, '')
+      .replace(/\s+(?:de|para|com|em|no|na|a|o)\s+/gi, ' ')
+      .trim()
+    
+    // Extrair descrição de forma mais simples e direta
+    // Padrão 1: "conta de [algo]" - mais comum
+    if (msgLower.includes('conta')) {
+      const contaMatch = mensagem.match(/conta\s+(?:de|da|do)?\s*([a-záàâãéêíóôõúç\s]+?)(?:\s+\d|$|,|\.|reais?)/i)
+      if (contaMatch && contaMatch[1]) {
+        descricao = `Conta de ${contaMatch[1].trim()}`
+      } else {
+        // Tentar pegar tudo após "conta"
+        const idxConta = msgLower.indexOf('conta')
+        const depoisConta = msgLower.substring(idxConta + 5).trim()
+        // Remover números e palavras desnecessárias
+        const limpo = depoisConta.replace(/\d+/g, '').replace(/\s*(?:reais?|r\$|de|para|com)\s*/gi, ' ').trim()
+        if (limpo.length > 0) {
+          descricao = `Conta de ${limpo.split(/\s+/).slice(0, 3).join(' ')}`
+        } else {
+          descricao = 'Conta'
+        }
+      }
+    } else {
+      // Padrão 2: pegar tudo após o número (caso não seja conta)
+      // Exemplo: "pago 300 mercado" -> "mercado"
+      const partes = mensagem.split(/\s+(\d+)\s+/i)
+      if (partes.length > 2) {
+        // Pegar a parte após o número
+        descricao = partes[2].trim()
+        // Remover palavras de ação e limpar
+        descricao = descricao.replace(/^(?:pago|paguei|pagar|pague|gastei|gastar|comprei|comprar|registrar|adicionar|cadastrar|de|para|com|em|no|na|a|o)\s+/i, '')
+      } else {
+        // Tentar pegar tudo após a palavra de ação
+        const match = mensagem.match(/(?:pago|paguei|pagar|pague|gastei|gastar|comprei|comprar)\s+\d+\s*(.+)/i)
+        if (match && match[1]) {
+          descricao = match[1].trim().split(/\s+/).slice(0, 4).join(' ')
+        } else {
+          // Último recurso: usar a mensagem limpa
+          descricao = mensagemLimpa.split(/\s+/).slice(0, 5).join(' ') || `Gasto de R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+        }
+      }
+    }
+    
+    // Limpar e formatar descrição
+    if (descricao) {
+      descricao = descricao.replace(/\s+/g, ' ').trim()
+      // Remover pontuação final
+      descricao = descricao.replace(/[.,;:!?]+$/, '')
+      // Capitalizar primeira letra
+      if (descricao.length > 0) {
+        descricao = descricao.charAt(0).toUpperCase() + descricao.slice(1)
+      }
+    }
+    
+    // Se ainda não tem descrição válida, criar uma genérica
+    if (!descricao || descricao.length < 3) {
+      descricao = `Gasto de R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    }
+    
+    return {
+      tipo: 'registrar_gasto',
+      dados: {
+        valor,
+        categoria,
+        descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao,
+        tipo: 'saida'
+      }
+    }
+  }
+
+  if (padroes.registrarEntrada.test(msgLower) && valor) {
+    // Extrair nome da pessoa - múltiplos padrões para "recebi X de [nome]"
+    let descricao = ''
+    
+    // Padrão 1: "recebi X de [nome]" ou "recebeu X de [nome]"
+    const recebiDeMatch = mensagem.match(/(?:recebi|recebeu|ganhei|ganhar)\s+.*?[\d.,]+\s*(?:reais?|r\$)?\s+de\s+([A-Za-zÀ-ÿ\s]+?)(?:\s|$|,|\.)/i)
+    if (recebiDeMatch && recebiDeMatch[1]) {
+      const nome = recebiDeMatch[1].trim()
+      // Limpar o nome (remover palavras desnecessárias)
+      const nomeLimpo = nome.replace(/\s+(?:reais?|r\$|de|para|com|em|no|na|a|o)\s+/gi, ' ').trim()
+      if (nomeLimpo.length > 0 && nomeLimpo.length < 50) {
+        // Capitalizar primeira letra
+        const nomeFormatado = nomeLimpo.charAt(0).toUpperCase() + nomeLimpo.slice(1).toLowerCase()
+        descricao = `Recebeu de ${nomeFormatado}`
+      }
+    }
+    
+    // Padrão 2: "recebi X [nome]" (sem "de")
+    if (!descricao) {
+      const recebiMatch = mensagem.match(/(?:recebi|recebeu|ganhei)\s+.*?[\d.,]+\s*(?:reais?|r\$)?\s+([A-Za-zÀ-ÿ]+)(?:\s|$|,|\.)/i)
+      if (recebiMatch && recebiMatch[1]) {
+        const nome = recebiMatch[1].trim()
+        if (nome.length > 1 && nome.length < 50 && !/(?:reais?|r\$|de|para|com|em|no|na|a|o)/i.test(nome)) {
+          const nomeFormatado = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()
+          descricao = `Recebeu de ${nomeFormatado}`
+        }
+      }
+    }
+    
+    // Padrão 3: "de [nome]" genérico (fallback)
+    if (!descricao) {
+      const deMatch = mensagem.match(/(?:de|para|com)\s+([A-Za-zÀ-ÿ]+)(?:\s|$|,|\.)/i)
+      if (deMatch && deMatch[1]) {
+        const nome = deMatch[1].trim()
+        if (nome.length > 1 && nome.length < 50 && !/(?:reais?|r\$|de|para|com|em|no|na|a|o)/i.test(nome)) {
+          const nomeFormatado = nome.charAt(0).toUpperCase() + nome.slice(1).toLowerCase()
+          descricao = `Recebeu de ${nomeFormatado}`
+        }
+      }
+    }
+    
+    // Se não encontrou nome, criar descrição genérica
+    if (!descricao || descricao.length < 3) {
+      descricao = `Entrada de R$ ${valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    }
+    
+    return {
+      tipo: 'registrar_entrada',
+      dados: {
+        valor,
+        descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao,
+        tipo: 'entrada'
+      }
+    }
+  }
+
+
+  return { tipo: 'geral', dados: null }
+}
+
+// Função para criar o prompt do sistema
+function criarSystemPrompt(contexto: any): string {
+  // Formatar informações de dívidas de forma clara
+  const infoDividas = contexto.quantidadeDividas > 0 
+    ? `Você possui ${contexto.quantidadeDividas} dívida(s) cadastrada(s), sendo ${contexto.quantidadePendentes} pendente(s).\n- Total de dívidas: R$ ${contexto.totalDividas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n- Total pendente: R$ ${contexto.totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    : 'Você não possui dívidas cadastradas no momento.'
+
+  return `Você é PLEN, um assistente financeiro inteligente e moderno. Você ajuda usuários a gerenciar suas finanças pessoais.
+
+CONTEXTO DO USUÁRIO:
+- Dívidas: ${infoDividas}
+- Gastos da semana: R$ ${contexto.gastosSemana?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+- Gastos do mês: R$ ${contexto.gastosMes?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+- Total de entradas: R$ ${contexto.totalEntradas?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+- Total de saídas: R$ ${contexto.totalSaidas?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'}
+
+FUNCIONALIDADES DISPONÍVEIS:
+1. Registrar gastos/entradas: "Registre um gasto de R$ 50,00 com alimentação"
+2. Consultar dívidas: "Quais são minhas dívidas?", "Qual o total de dívidas que tenho?", "Quanto devo?"
+3. Consultar gastos: "Quanto gastei na semana/mês?"
+4. Consultar saldo: "Qual é meu saldo atual?"
+
+INSTRUÇÕES IMPORTANTES:
+- Se o usuário perguntar sobre dívidas, use SEMPRE os dados do CONTEXTO acima
+- Se houver dívidas, informe a quantidade e o valor total
+- Se não houver dívidas, diga claramente que não há dívidas cadastradas
+- Seja direto, amigável e profissional
+- Use linguagem natural e moderna
+- Se o usuário pedir para registrar algo, confirme os dados
+- Se for uma consulta, forneça informações claras e organizadas
+- Responda sempre em português brasileiro
+- Seja conciso mas completo`
+}
+
+// Função para chamar Claude (Anthropic)
+async function chamarClaude(mensagem: string, contexto: any, historico: any[]): Promise<string | null> {
+  if (!process.env.ANTHROPIC_API_KEY) return null
+
+  try {
+    const systemPrompt = criarSystemPrompt(contexto)
+    const messages = [
+      ...historico.slice(-5).map((h: any) => ({
+        role: h.role === 'assistant' ? 'assistant' : 'user',
+        content: h.content
+      })),
+      { role: 'user' as const, content: mensagem }
+    ]
+
+    const response = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': process.env.ANTHROPIC_API_KEY,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: process.env.ANTHROPIC_MODEL || 'claude-3-5-haiku-20241022',
+        max_tokens: 1024,
+        system: systemPrompt,
+        messages: messages,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Erro ao chamar Claude:', error)
+      return null
+    }
+
+    const data = await response.json()
+    if (data.content?.[0]?.text) {
+      return data.content[0].text
+    }
+  } catch (error) {
+    console.error('Erro ao chamar Claude:', error)
+  }
+  return null
+}
+
+// Função para chamar Groq (rápida e gratuita)
+async function chamarGroq(mensagem: string, contexto: any, historico: any[]): Promise<string | null> {
+  if (!process.env.GROQ_API_KEY) return null
+
+  try {
+    const systemPrompt = criarSystemPrompt(contexto)
+    const messages = [
+      {
+        role: 'system',
+        content: systemPrompt
+      },
+      ...historico.slice(-5).map((h: any) => ({
+        role: h.role === 'assistant' ? 'assistant' : 'user',
+        content: h.content
+      })),
+      {
+        role: 'user',
+        content: mensagem
+      }
+    ]
+
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: process.env.GROQ_MODEL || 'llama-3.1-8b-instant',
+        messages: messages,
+        temperature: 0.7,
+        max_tokens: 1024,
+      }),
+    })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Erro ao chamar Groq:', error)
+      return null
+    }
+
+    const data = await response.json()
+    if (data.choices?.[0]?.message?.content) {
+      return data.choices[0].message.content
+    }
+  } catch (error) {
+    console.error('Erro ao chamar Groq:', error)
+  }
+  return null
+}
+
+// Função para chamar Google Gemini
+async function chamarGemini(mensagem: string, contexto: any, historico: any[]): Promise<string | null> {
+  if (!process.env.GEMINI_API_KEY) return null
+
+  try {
+    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash'
+    const systemPrompt = criarSystemPrompt(contexto)
+    const fullPrompt = `${systemPrompt}
+
+HISTÓRICO DA CONVERSA (últimas 5 mensagens):
+${historico.slice(-5).map((h: any) => `${h.role}: ${h.content}`).join('\n')}
+
+MENSAGEM DO USUÁRIO: ${mensagem}
+
+RESPOSTA:`
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{
+            text: fullPrompt
+            }]
+          }],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 1024,
+          }
+        }),
+      })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Erro ao chamar Gemini:', error)
+      return null
+    }
+
+      const data = await response.json()
+      if (data.candidates?.[0]?.content?.parts?.[0]?.text) {
+        return data.candidates[0].content.parts[0].text
+      }
+  } catch (error) {
+    console.error('Erro ao chamar Gemini:', error)
+  }
+  return null
+}
+
+// Função para chamar OpenAI
+async function chamarOpenAI(mensagem: string, contexto: any, historico: any[]): Promise<string | null> {
+  if (!process.env.OPENAI_API_KEY) return null
+
+  try {
+    const systemPrompt = criarSystemPrompt(contexto)
+      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+        model: process.env.OPENAI_MODEL || 'gpt-3.5-turbo',
+          messages: [
+            {
+              role: 'system',
+            content: systemPrompt
+            },
+          ...historico.slice(-5).map((h: any) => ({
+              role: h.role,
+              content: h.content
+            })),
+            {
+              role: 'user',
+              content: mensagem
+            }
+          ],
+        max_tokens: 1024,
+          temperature: 0.7,
+        }),
+      })
+
+    if (!response.ok) {
+      const error = await response.text()
+      console.error('Erro ao chamar OpenAI:', error)
+      return null
+    }
+
+      const data = await response.json()
+      if (data.choices?.[0]?.message?.content) {
+        return data.choices[0].message.content
+    }
+  } catch (error) {
+    console.error('Erro ao chamar OpenAI:', error)
+  }
+  return null
+}
+
+// Função para gerar resposta usando IA (suporta múltiplos provedores)
+async function gerarRespostaIA(mensagem: string, contexto: any, historico: any[]) {
+  // Determinar qual provedor usar baseado na variável de ambiente
+  // Ordem padrão: Groq (gratuito) > Gemini (gratuito) > Claude > OpenAI
+  // Se não especificado, detecta automaticamente qual API key está disponível
+  const aiProvider = process.env.AI_PROVIDER?.toLowerCase() || 'auto'
+  
+  // Lista de provedores para tentar em ordem de prioridade
+  const providers: Array<() => Promise<string | null>> = []
+  
+  // Modo automático: detecta qual API key está disponível e prioriza
+  if (aiProvider === 'auto') {
+    // Ordem: Groq (gratuito) > Gemini (gratuito) > Claude > OpenAI
+    if (process.env.GROQ_API_KEY) {
+      providers.push(() => chamarGroq(mensagem, contexto, historico))
+    }
+    if (process.env.GEMINI_API_KEY) {
+      providers.push(() => chamarGemini(mensagem, contexto, historico))
+    }
+    if (process.env.ANTHROPIC_API_KEY) {
+      providers.push(() => chamarClaude(mensagem, contexto, historico))
+    }
+    if (process.env.OPENAI_API_KEY) {
+      providers.push(() => chamarOpenAI(mensagem, contexto, historico))
+    }
+  } 
+  // Modo específico: usar apenas o provedor escolhido
+  else if (aiProvider === 'groq') {
+    providers.push(() => chamarGroq(mensagem, contexto, historico))
+  } else if (aiProvider === 'gemini') {
+    providers.push(() => chamarGemini(mensagem, contexto, historico))
+  } else if (aiProvider === 'claude') {
+    providers.push(() => chamarClaude(mensagem, contexto, historico))
+  } else if (aiProvider === 'openai') {
+    providers.push(() => chamarOpenAI(mensagem, contexto, historico))
+  }
+
+  // Tentar cada provedor até conseguir uma resposta
+  for (const provider of providers) {
+    try {
+      const resposta = await provider()
+      if (resposta) {
+        return resposta
+      }
+    } catch (error) {
+      console.error('Erro ao tentar provedor de IA:', error)
+      continue
+    }
+  }
+
+  // Fallback: processamento local se nenhuma IA funcionar
+  return processarComandoLocal(mensagem, contexto, historico)
+}
+
+// Processamento local quando não há API de IA
+function processarComandoLocal(mensagem: string, contexto: any, historico: any[]): string {
+  const comando = processarComando(mensagem, contexto)
+  
+  switch (comando.tipo) {
+    case 'consultar_dividas':
+      const dividas = contexto.dividas || []
+      if (dividas.length === 0) {
+        return 'Você não possui dívidas cadastradas no momento. 🎉'
+      }
+      const dividasPendentes = dividas.filter((d: any) => {
+        const valorPago = d.parcelas_pagas && d.parcelas_totais 
+          ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+          : 0
+        return valorPago < parseFloat(d.valor)
+      })
+      const totalDividas = dividas.reduce((sum: number, d: any) => sum + parseFloat(d.valor || 0), 0)
+      const totalPendente = dividasPendentes.reduce((sum: number, d: any) => {
+        const valorPago = d.parcelas_pagas && d.parcelas_totais 
+          ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+          : 0
+        return sum + (parseFloat(d.valor || 0) - valorPago)
+      }, 0)
+      
+      return `Você possui ${dividas.length} dívida(s) cadastrada(s), sendo ${dividasPendentes.length} pendente(s).\n\n💰 Total: R$ ${totalDividas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n⏳ Pendente: R$ ${totalPendente.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+    
+    case 'gastos_semana':
+      const gastosSemana = contexto.gastosSemana || 0
+      if (gastosSemana === 0) {
+        return 'Você não teve gastos nesta semana. Parabéns! 🎉'
+      }
+      return `Você gastou R$ ${gastosSemana.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} nesta semana.`
+    
+    case 'gastos_mes':
+      const gastosMes = contexto.gastosMes || 0
+      if (gastosMes === 0) {
+        return 'Você não teve gastos neste mês. Parabéns! 🎉'
+      }
+      return `Você gastou R$ ${gastosMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} neste mês.`
+    
+    case 'total_entradas':
+      const entradas = contexto.estatisticas?.totalEntradas || 0
+      if (entradas === 0) {
+        return 'Você ainda não possui entradas registradas.'
+      }
+      return `Suas entradas totalizam R$ ${entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
+    
+    case 'total_saidas':
+      const saidas = contexto.estatisticas?.totalSaidas || 0
+      if (saidas === 0) {
+        return 'Você ainda não possui saídas registradas.'
+      }
+      return `Suas saídas totalizam R$ ${saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
+    
+    default:
+      return 'Olá! Eu sou o PLEN, seu assistente financeiro. Como posso ajudar?\n\n💡 **Comandos disponíveis:**\n\n• "Registre um gasto de R$ 50,00 com alimentação"\n• "Adicione uma entrada de R$ 1.000,00"\n• "Quais são minhas dívidas?"\n• "Quanto gastei na semana?"\n• "Quanto gastei no mês?"\n• "Quais são minhas entradas?"\n• "Quais são minhas saídas?"\n\nVocê pode falar ou digitar! 🎤💬'
+  }
+}
+
+export async function POST(request: NextRequest) {
+  try {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+
+    if (!user) {
+      return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
+    }
+
+    const { message, conversationHistory } = await request.json()
+
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json({ error: 'Mensagem inválida' }, { status: 400 })
+    }
+
+    // Buscar dados do usuário
+    const [dividasResult, registrosResult, estatisticasResult] = await Promise.all([
+      obterDividas(),
+      obterRegistros(),
+      obterEstatisticas()
+    ])
+
+    const dividas = dividasResult?.data || []
+    const registros = registrosResult?.data || []
+    const estatisticas = estatisticasResult || {}
+
+    // Calcular gastos da semana
+    const hoje = new Date()
+    const inicioSemana = startOfWeek(hoje, { locale: ptBR })
+    const registrosSemana = registros.filter((r: any) => {
+      const dataRegistro = new Date(r.data_registro)
+      return dataRegistro >= inicioSemana && r.tipo === 'saida'
+    })
+    const gastosSemana = registrosSemana.reduce((sum: number, r: any) => sum + parseFloat(r.valor || 0), 0)
+
+    // Calcular gastos do mês
+    const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1)
+    const registrosMes = registros.filter((r: any) => {
+      const dataRegistro = new Date(r.data_registro)
+      return dataRegistro >= inicioMes && r.tipo === 'saida'
+    })
+    const gastosMes = registrosMes.reduce((sum: number, r: any) => sum + parseFloat(r.valor || 0), 0)
+
+    // Calcular total de dívidas e dívidas pendentes
+    const totalDividas = dividas.reduce((sum: number, d: any) => sum + parseFloat(d.valor || 0), 0)
+    const dividasPendentes = dividas.filter((d: any) => {
+      const valorPago = d.parcelas_pagas && d.parcelas_totais 
+        ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+        : 0
+      return valorPago < parseFloat(d.valor)
+    })
+    const totalPendente = dividasPendentes.reduce((sum: number, d: any) => {
+      const valorPago = d.parcelas_pagas && d.parcelas_totais 
+        ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+        : 0
+      return sum + (parseFloat(d.valor || 0) - valorPago)
+    }, 0)
+
+    const contexto = {
+      dividas,
+      totalDividas,
+      totalPendente,
+      quantidadeDividas: dividas.length,
+      quantidadePendentes: dividasPendentes.length,
+      registros: registros.slice(0, 10), // Últimos 10 registros
+      estatisticas,
+      gastosSemana,
+      gastosMes,
+      totalEntradas: estatisticas?.totalEntradas || 0,
+      totalSaidas: estatisticas?.totalSaidas || 0
+    }
+
+    // Verificar se é uma confirmação (sim/não) de uma transação pendente
+    const msgLower = message.toLowerCase().trim()
+    const isConfirmacao = /^(sim|s[íi]|yes|ok|confirmar|pode|pode confirmar|confirma|quero|desejo)$/i.test(msgLower)
+    const isNegacao = /^(n[ãa]o|nao|no|n[ãa]o quero|cancelar|cancela)$/i.test(msgLower)
+    
+    // Verificar histórico para encontrar confirmação pendente
+    let pendingConfirmation: any = null
+    if (isConfirmacao || isNegacao) {
+      // Procurar nas últimas 3 respostas da IA por dados de transação
+      const ultimasRespostasIA = conversationHistory?.slice().reverse().filter((h: any) => h.role === 'assistant').slice(0, 3)
+      
+      for (const respostaIA of ultimasRespostasIA || []) {
+        if (!respostaIA?.content) continue
+        
+        // Extrair valor - múltiplos padrões
+        const valorPatterns = [
+          /r\$\s*([\d.,]+)/i,
+          /([\d.,]+)\s*reais?/i,
+          /valor\s*(?:de|de\s+)?([\d.,]+)/i,
+          /\b(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*(?:reais?|r\$|de)?\b/i
+        ]
+        
+        let valorMatch = null
+        for (const pattern of valorPatterns) {
+          valorMatch = respostaIA.content.match(pattern)
+          if (valorMatch) break
+        }
+        
+        if (valorMatch) {
+          const valorStr = valorMatch[1] || valorMatch[0]
+          const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'))
+          
+          if (!isNaN(valor) && valor > 0 && valor < 10000000) {
+            // Detectar tipo
+            const tipoMatch = respostaIA.content.match(/(entrada|receita|recebido|recebeu|gasto|despesa|sa[ií]da|divida|d[ií]vida|pago|paguei)/i)
+            const tipo = tipoMatch ? (
+              /(entrada|receita|recebido|recebeu)/i.test(tipoMatch[1]) ? 'entrada' :
+              /(divida|d[ií]vida)/i.test(tipoMatch[1]) ? 'divida' : 'saida'
+            ) : 'entrada' // Default para entrada se não especificado
+            
+            // Extrair descrição - múltiplos padrões
+            const descricaoPatterns = [
+              /(?:de|para|com|em|no|na|recebido|recebeu|de)\s+([^,\.\?]+?)(?:\s+deseja|\s+quer|\s+gostaria|\s+pode|\s+confirma|\?|$)/i,
+              /(?:de|para|com|em|no|na)\s+([A-Za-zÀ-ÿ\s]+?)(?:\s+\d|\s+deseja|\s+quer|\s+gostaria|\s+pode|\s+confirma|\?|$)/i
+            ]
+            
+            let descricao = ''
+            for (const pattern of descricaoPatterns) {
+              const match = respostaIA.content.match(pattern)
+              if (match && match[1]) {
+                descricao = match[1].trim()
+                break
+              }
+            }
+            
+            if (!descricao || descricao.length < 3) {
+              descricao = `Registro de ${tipo === 'entrada' ? 'entrada' : tipo === 'divida' ? 'dívida' : 'gasto'}`
+            }
+            
+            pendingConfirmation = {
+              valor,
+              tipo,
+              descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao
+            }
+            break // Encontrou, pode parar
+          }
+        }
+      }
+    }
+
+    // Processar comando
+    const comando = processarComando(message, contexto)
+    console.log('🔍 [PLEN] Comando detectado:', comando.tipo, comando.dados)
+    console.log('📊 [PLEN] Contexto - Dívidas:', {
+      quantidade: dividas.length,
+      total: totalDividas,
+      pendente: totalPendente
+    })
+    let resposta = ''
+    let actionData = null
+    let pendingAction: any = null
+
+    // CRÍTICO: Verificar permissões ANTES de processar qualquer comando de registro
+    // Isso garante que mensagens de bloqueio sejam mostradas antes de qualquer outra resposta
+    if (comando.tipo === 'registrar_divida' || comando.tipo === 'registrar_gasto' || comando.tipo === 'registrar_entrada') {
+      console.log('🔒 [PLEN] Verificando permissões para:', comando.tipo)
+      const permissoes = await verificarPermissoes(user, comando.tipo, comando.dados?.descricao)
+      
+      if (!permissoes.permitido) {
+        console.log('⚠️ [PLEN] Permissão negada:', permissoes.motivo)
+        return NextResponse.json({
+          response: permissoes.motivo || 'Você não tem permissão para executar esta ação.',
+          actionData: null
+        })
+      }
+    }
+
+    // PRIORIDADE: Processar consultas simples localmente antes de chamar IA
+    if (comando.tipo === 'consultar_dividas') {
+      console.log('✅ [PLEN] Processando consulta de dívidas localmente')
+      const dividasLocal = dividas || []
+      if (dividasLocal.length === 0) {
+        resposta = 'Você não possui dívidas cadastradas no momento. 🎉'
+      } else {
+        const dividasPendentesLocal = dividasLocal.filter((d: any) => {
+          const valorPago = d.parcelas_pagas && d.parcelas_totais 
+            ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+            : 0
+          return valorPago < parseFloat(d.valor)
+        })
+        const totalDividasLocal = dividasLocal.reduce((sum: number, d: any) => sum + parseFloat(d.valor || 0), 0)
+        const totalPendenteLocal = dividasPendentesLocal.reduce((sum: number, d: any) => {
+          const valorPago = d.parcelas_pagas && d.parcelas_totais 
+            ? (parseFloat(d.valor) * parseFloat(d.parcelas_pagas)) / parseFloat(d.parcelas_totais)
+            : 0
+          return sum + (parseFloat(d.valor || 0) - valorPago)
+        }, 0)
+        
+        resposta = `Você possui ${dividasLocal.length} dívida(s) cadastrada(s), sendo ${dividasPendentesLocal.length} pendente(s).\n\n💰 Total: R$ ${totalDividasLocal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n⏳ Pendente: R$ ${totalPendenteLocal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`
+      }
+    }
+
+    // Se é uma confirmação e temos dados pendentes, processar
+    if (isConfirmacao && pendingConfirmation) {
+      console.log('✅ [PLEN] Processando confirmação:', pendingConfirmation)
+      
+      // CRÍTICO: Verificar permissões antes de processar confirmação
+      const permissoes = await verificarPermissoes(user, pendingConfirmation.tipo === 'divida' ? 'registrar_divida' : pendingConfirmation.tipo === 'saida' ? 'registrar_gasto' : 'registrar_entrada', pendingConfirmation.descricao)
+      
+      if (!permissoes.permitido) {
+        console.log('⚠️ [PLEN] Permissão negada na confirmação:', permissoes.motivo)
+        resposta = permissoes.motivo || 'Você não tem permissão para executar esta ação.'
+        pendingConfirmation = null // Limpar confirmação pendente
+      } else {
+        const { data: usuarios } = await supabase
+          .from('users')
+          .select('id')
+          .limit(1)
+        
+        const user_id = usuarios && usuarios.length > 0 ? usuarios[0].id : user.id
+        
+        const formData = new FormData()
+        formData.append('nome', pendingConfirmation.descricao)
+        formData.append('tipo', pendingConfirmation.tipo)
+        formData.append('valor', pendingConfirmation.valor.toString())
+        formData.append('categoria', 'outros')
+        formData.append('data_registro', new Date().toISOString())
+        formData.append('metodo_pagamento', 'dinheiro')
+        formData.append('parcelas_totais', '1')
+        formData.append('parcelas_pagas', '0')
+        formData.append('user_id', user_id)
+        
+        if (pendingConfirmation.tipo === 'divida') {
+          formData.append('etiquetas', JSON.stringify(['dívida', 'dinheiro']))
+        } else {
+          formData.append('etiquetas', JSON.stringify(['dinheiro']))
+        }
+
+        const resultado = await criarRegistro(formData)
+        
+        if (resultado.error) {
+          resposta = `Desculpe, não consegui registrar. Erro: ${resultado.error}`
+        } else {
+          const tipoRegistro = pendingConfirmation.tipo === 'divida' ? 'Dívida' : pendingConfirmation.tipo === 'saida' ? 'Gasto' : 'Entrada'
+          resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${pendingConfirmation.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${pendingConfirmation.descricao ? ` - ${pendingConfirmation.descricao}` : ''}`
+          actionData = {
+            action: 'created',
+            message: `${tipoRegistro} registrado com sucesso!`
+          }
+        }
+        pendingConfirmation = null // Limpar após processar
+      }
+    } else if (isNegacao && pendingConfirmation) {
+      resposta = 'Entendido, registro cancelado. Como posso ajudar?'
+    }
+    // Se já processamos a consulta de dívidas, não continuar
+    else if (comando.tipo === 'consultar_dividas' && resposta) {
+      // Já processado acima, não fazer nada
+    }
+    // Executar ação se necessário (PRIORIDADE: executar comandos antes de usar IA)
+    // NOTA: Permissões já foram verificadas no início, antes de processar consultas
+    else if (comando.tipo === 'registrar_gasto' || comando.tipo === 'registrar_entrada' || comando.tipo === 'registrar_divida') {
+      console.log('✅ [PLEN] Executando registro:', comando.dados)
+      
+      // Buscar o primeiro usuário disponível
+      const { data: usuarios } = await supabase
+        .from('users')
+        .select('id')
+        .limit(1)
+      
+      // Usar o primeiro usuário ou o ID do usuário autenticado como fallback
+      const user_id = usuarios && usuarios.length > 0 ? usuarios[0].id : user.id
+      
+      const formData = new FormData()
+      formData.append('nome', comando.dados.descricao)
+      formData.append('tipo', comando.dados.tipo)
+      formData.append('valor', comando.dados.valor.toString())
+      formData.append('categoria', comando.dados.categoria || 'outros')
+      formData.append('data_registro', new Date().toISOString())
+      formData.append('metodo_pagamento', 'dinheiro')
+      formData.append('parcelas_totais', '1')
+      formData.append('parcelas_pagas', '0')
+      formData.append('user_id', user_id) // Adicionar user_id
+      
+      // Para dívidas, adicionar etiquetas específicas
+      if (comando.tipo === 'registrar_divida') {
+        formData.append('etiquetas', JSON.stringify(['dívida', 'dinheiro']))
+      } else {
+        formData.append('etiquetas', JSON.stringify(['dinheiro']))
+      }
+
+      console.log('📝 [PLEN] Criando registro com:', {
+        nome: comando.dados.descricao,
+        tipo: comando.dados.tipo,
+        valor: comando.dados.valor,
+        categoria: comando.dados.categoria,
+        user_id: user_id
+      })
+
+      const resultado = await criarRegistro(formData)
+      
+      console.log('📊 [PLEN] Resultado do registro:', resultado)
+      
+      if (resultado.error) {
+        console.error('❌ [PLEN] Erro ao registrar:', resultado.error)
+        const tipoRegistro = comando.dados.tipo === 'divida' ? 'dívida' : comando.dados.tipo === 'saida' ? 'gasto' : 'entrada'
+        resposta = `Desculpe, não consegui registrar a ${tipoRegistro}. Erro: ${resultado.error}`
+      } else {
+        console.log('✅ [PLEN] Registro criado com sucesso!')
+        const tipoRegistro = comando.dados.tipo === 'divida' ? 'Dívida' : comando.dados.tipo === 'saida' ? 'Gasto' : 'Entrada'
+        resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${comando.dados.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${comando.dados.descricao ? ` - ${comando.dados.descricao}` : ''}`
+        actionData = {
+          action: 'created',
+          message: `${tipoRegistro} registrado com sucesso!`
+        }
+      }
+    } else if (!resposta) {
+      // Gerar resposta usando IA ou processamento local (apenas se ainda não tiver resposta)
+      resposta = await gerarRespostaIA(message, contexto, conversationHistory || [])
+      
+      // Detectar se a resposta da IA pede confirmação
+      const pedeConfirmacao = /(deseja|quer|gostaria|pode|confirma|confirmar|posso|você gostaria|deseja confirmar).*(confirmar|registrar|criar|adicionar|isso|essa entrada|esse registro)/i.test(resposta) ||
+                              /(deseja confirmar|quer confirmar|gostaria de confirmar|pode confirmar|confirma isso)/i.test(resposta)
+      
+      if (pedeConfirmacao) {
+        // Tentar extrair dados da transação da resposta - múltiplos padrões
+        const valorPatterns = [
+          /r\$\s*([\d.,]+)/i,
+          /([\d.,]+)\s*reais?/i,
+          /valor\s*(?:de|de\s+)?([\d.,]+)/i,
+          /\b(\d{1,3}(?:[.,]\d{3})*(?:[.,]\d{2})?)\s*(?:reais?|r\$|de)?\b/i
+        ]
+        
+        let valorMatch = null
+        for (const pattern of valorPatterns) {
+          valorMatch = resposta.match(pattern)
+          if (valorMatch) break
+        }
+        
+        if (valorMatch) {
+          const valorStr = valorMatch[1] || valorMatch[0]
+          const valor = parseFloat(valorStr.replace(/\./g, '').replace(',', '.'))
+          
+          if (!isNaN(valor) && valor > 0 && valor < 10000000) {
+            // Detectar tipo
+            const tipoMatch = resposta.match(/(entrada|receita|recebido|recebeu|gasto|despesa|sa[ií]da|divida|d[ií]vida|pago|paguei)/i)
+            const tipo = tipoMatch ? (
+              /(entrada|receita|recebido|recebeu)/i.test(tipoMatch[1]) ? 'entrada' :
+              /(divida|d[ií]vida)/i.test(tipoMatch[1]) ? 'divida' : 'saida'
+            ) : 'entrada'
+            
+            // Extrair descrição - múltiplos padrões
+            const descricaoPatterns = [
+              /(?:de|para|com|em|no|na|recebido|recebeu|de)\s+([A-Za-zÀ-ÿ\s]+?)(?:\s+deseja|\s+quer|\s+gostaria|\s+pode|\s+confirma|\?|$)/i,
+              /(?:de|para|com|em|no|na)\s+([^,\.\?]+?)(?:\s+\d|\s+deseja|\s+quer|\s+gostaria|\s+pode|\s+confirma|\?|$)/i
+            ]
+            
+            let descricao = ''
+            for (const pattern of descricaoPatterns) {
+              const match = resposta.match(pattern)
+              if (match && match[1]) {
+                descricao = match[1].trim()
+                // Limpar descrição
+                descricao = descricao.replace(/^(?:de|para|com|em|no|na|recebido|recebeu|de)\s+/i, '')
+                if (descricao.length > 3) break
+              }
+            }
+            
+            if (!descricao || descricao.length < 3) {
+              descricao = `Registro de ${tipo === 'entrada' ? 'entrada' : tipo === 'divida' ? 'dívida' : 'gasto'}`
+            }
+            
+            pendingAction = {
+              valor,
+              tipo,
+              descricao: descricao.length > 100 ? descricao.substring(0, 100) : descricao
+            }
+            console.log('🔔 [PLEN] Confirmação pendente detectada:', pendingAction)
+          }
+        }
+      }
+    }
+
+    return NextResponse.json({
+      response: resposta,
+      actionData,
+      pendingAction
+    })
+  } catch (error: any) {
+    console.error('Erro no chat PLEN:', error)
+    return NextResponse.json(
+      { error: error.message || 'Erro ao processar mensagem' },
+      { status: 500 }
+    )
+  }
+}
+

@@ -417,7 +417,7 @@ export default function CentralBanners() {
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-brand-clean/90 mb-2">
-                  Upload de Imagem (1920x1080 recomendado)
+                  Upload de Imagem (1920x720 recomendado)
                 </label>
                 <div className="flex items-center gap-2">
                   <label className="flex-1 px-4 py-3 bg-brand-midnight border border-white/20 rounded-xl text-brand-clean cursor-pointer hover:bg-brand-midnight/80 transition-smooth flex items-center justify-center gap-2">
@@ -438,7 +438,7 @@ export default function CentralBanners() {
                   )}
                 </div>
                 <p className="text-xs text-brand-clean/50 mt-2">
-                  Tamanho recomendado: 1920x1080px. Máximo 10MB.
+                  Tamanho recomendado: 1920x720px (proporção 8:3). Máximo 10MB.
                 </p>
               </div>
 
@@ -512,7 +512,7 @@ export default function CentralBanners() {
       {showImageEditor && selectedImageFile && (
         <ImageEditor
           imageFile={selectedImageFile}
-          aspectRatio={16/9}
+          aspectRatio={8/3}
           onSave={handleImageEditorSave}
           onCancel={handleImageEditorCancel}
         />

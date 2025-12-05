@@ -90,14 +90,14 @@ export default function AdminLoginPage() {
               <LogIn size={32} className="text-brand-aqua" />
             </div>
             <h1 
-              className="text-3xl font-display text-brand-clean mb-2"
-              style={{ color: '#E6E6E6' }}
+              className="text-3xl font-display font-bold text-brand-clean mb-2"
+              style={{ color: '#E6E6E6', fontWeight: 700 }}
             >
               Painel Administrativo
             </h1>
             <p 
-              className="text-brand-clean/70"
-              style={{ color: 'rgba(230, 230, 230, 0.7)' }}
+              className="font-semibold text-brand-clean/70"
+              style={{ color: 'rgba(230, 230, 230, 0.7)', fontWeight: 600 }}
             >
               Acesso restrito ao administrador
             </p>
@@ -121,7 +121,7 @@ export default function AdminLoginPage() {
             )}
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean/90 mb-2">
+              <label className="block text-sm font-bold text-brand-clean/90 mb-2">
                 Email
               </label>
               <input
@@ -140,7 +140,7 @@ export default function AdminLoginPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean/90 mb-2">
+              <label className="block text-sm font-bold text-brand-clean/90 mb-2">
                 Senha
               </label>
               <input

@@ -1,28 +1,30 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { X, RotateCw, ZoomIn, ZoomOut, Move, Check } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { X, RotateCw, ZoomIn, ZoomOut, Check } from 'lucide-react'
 
 interface ImageEditorProps {
   imageFile: File
-  aspectRatio?: number // 16/9 para banners
+  aspectRatio?: number // 8/3 para banners 1920x720
   onSave: (croppedImageBlob: Blob) => void
   onCancel: () => void
 }
 
-export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onCancel }: ImageEditorProps) {
+export default function ImageEditor({ imageFile, aspectRatio = 8/3, onSave, onCancel }: ImageEditorProps) {
   const [imageSrc, setImageSrc] = useState<string>('')
-  const [scale, setScale] = useState(1)
   const [position, setPosition] = useState({ x: 0, y: 0 })
   const [rotation, setRotation] = useState(0)
   const [isDragging, setIsDragging] = useState(false)
-  const [isResizing, setIsResizing] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-  const [resizeStart, setResizeStart] = useState({ x: 0, y: 0, scale: 1 })
+  const [baseScale, setBaseScale] = useState(1) // Escala base para preencher container
+  const [zoomScale, setZoomScale] = useState(1) // Zoom adicional (começa em 1 = 100%)
   
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const imageRef = useRef<HTMLImageElement | null>(null)
+  
+  // Calcular escala total
+  const totalScale = baseScale * zoomScale
 
   useEffect(() => {
     const reader = new FileReader()
@@ -32,56 +34,115 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
     reader.readAsDataURL(imageFile)
   }, [imageFile])
 
+  // Função para limitar posição dentro dos limites (useCallback para evitar problemas de dependência)
+  const constrainPosition = useCallback((newPosition: { x: number, y: number }, scale: number = totalScale) => {
+    if (!imageRef.current || !containerRef.current) return newPosition
+    
+    const img = imageRef.current
+    const container = containerRef.current
+    
+    const imgWidth = (img.naturalWidth || img.width) * scale
+    const imgHeight = (img.naturalHeight || img.height) * scale
+    const containerWidth = container.clientWidth
+    const containerHeight = container.clientHeight
+    
+    // Se a imagem é menor que o container, não pode se mover
+    if (imgWidth <= containerWidth && imgHeight <= containerHeight) {
+      return { x: 0, y: 0 }
+    }
+    
+    // Calcular limites: imagem não pode sair completamente do container
+    // A imagem está centralizada, então os limites são baseados na diferença de tamanho
+    const maxX = Math.max(0, (imgWidth - containerWidth) / 2)
+    const maxY = Math.max(0, (imgHeight - containerHeight) / 2)
+    const minX = -maxX
+    const minY = -maxY
+    
+    return {
+      x: Math.max(minX, Math.min(maxX, newPosition.x)),
+      y: Math.max(minY, Math.min(maxY, newPosition.y))
+    }
+  }, [totalScale])
+
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging && !isResizing) {
-        setPosition({
+      if (isDragging) {
+        const newPosition = {
           x: e.clientX - dragStart.x,
           y: e.clientY - dragStart.y
-        })
-      } else if (isResizing) {
-        const deltaX = e.clientX - resizeStart.x
-        const deltaY = e.clientY - resizeStart.y
-        const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
-        const direction = deltaX + deltaY > 0 ? 1 : -1
-        const scaleChange = (distance / 200) * direction
-        const newScale = Math.max(0.1, Math.min(5, resizeStart.scale + scaleChange))
-        setScale(newScale)
+        }
+        const constrained = constrainPosition(newPosition)
+        setPosition(constrained)
       }
     }
 
     const handleGlobalMouseUp = () => {
       setIsDragging(false)
-      setIsResizing(false)
     }
 
-    if (isDragging || isResizing) {
+    const handleGlobalTouchMove = (e: TouchEvent) => {
+      if (e.touches.length === 1 && isDragging) {
+        const touch = e.touches[0]
+        const newPosition = {
+          x: touch.clientX - dragStart.x,
+          y: touch.clientY - dragStart.y
+        }
+        const constrained = constrainPosition(newPosition)
+        setPosition(constrained)
+      }
+    }
+
+    const handleGlobalTouchEnd = () => {
+      setIsDragging(false)
+    }
+
+    if (isDragging) {
       window.addEventListener('mousemove', handleGlobalMouseMove)
       window.addEventListener('mouseup', handleGlobalMouseUp)
+      window.addEventListener('touchmove', handleGlobalTouchMove, { passive: false })
+      window.addEventListener('touchend', handleGlobalTouchEnd)
       return () => {
         window.removeEventListener('mousemove', handleGlobalMouseMove)
         window.removeEventListener('mouseup', handleGlobalMouseUp)
+        window.removeEventListener('touchmove', handleGlobalTouchMove)
+        window.removeEventListener('touchend', handleGlobalTouchEnd)
       }
     }
-  }, [isDragging, isResizing, dragStart, resizeStart])
+  }, [isDragging, dragStart, constrainPosition])
 
   const handleImageLoad = () => {
-    // Ajustar escala inicial para caber na área
+    // Ajustar escala inicial para preencher o container
     if (imageRef.current && containerRef.current) {
       const img = imageRef.current
       const container = containerRef.current
       
-      // Calcular escala para preencher o container mantendo aspect ratio
-      const scaleX = container.clientWidth / img.width
-      const scaleY = container.clientHeight / img.height
-      const initialScale = Math.max(scaleX, scaleY) * 1.1 // 10% maior para garantir cobertura
+      // Usar dimensões naturais da imagem
+      const imgWidth = img.naturalWidth || img.width
+      const imgHeight = img.naturalHeight || img.height
+      const containerWidth = container.clientWidth
+      const containerHeight = container.clientHeight
       
-      setScale(initialScale)
+      // Calcular escala para preencher o container mantendo aspect ratio
+      const scaleX = containerWidth / imgWidth
+      const scaleY = containerHeight / imgHeight
+      const scale = Math.max(scaleX, scaleY) // Preencher sem deixar espaços
+      
+      setBaseScale(scale)
+      setZoomScale(1) // Resetar zoom ao carregar nova imagem
       setPosition({ x: 0, y: 0 })
     }
   }
+  
+  // Ajustar posição quando zoom mudar para manter imagem dentro dos limites
+  useEffect(() => {
+    if (imageRef.current && containerRef.current) {
+      setPosition(prev => constrainPosition(prev))
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoomScale])
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (e.button !== 0) return // Apenas botão esquerdo
     setIsDragging(true)
     setDragStart({
       x: e.clientX - position.x,
@@ -89,24 +150,40 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
     })
   }
 
-
-  const handleResizeStart = (e: React.MouseEvent) => {
-    setIsResizing(true)
-    setResizeStart({
-      x: e.clientX,
-      y: e.clientY,
-      scale: scale
-    })
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      const touch = e.touches[0]
+      setIsDragging(true)
+      setDragStart({
+        x: touch.clientX - position.x,
+        y: touch.clientY - position.y
+      })
+    }
   }
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault()
-    const delta = e.deltaY > 0 ? 0.9 : 1.1
-    setScale(prev => Math.max(0.1, Math.min(5, prev * delta)))
-  }
 
   const handleRotate = () => {
     setRotation(prev => (prev + 90) % 360)
+    // Reajustar posição após rotação
+    setTimeout(() => {
+      if (imageRef.current && containerRef.current) {
+        setPosition(prev => constrainPosition(prev))
+      }
+    }, 50)
+  }
+  
+  const handleZoomIn = () => {
+    setZoomScale(prev => {
+      const newZoom = Math.min(3, prev * 1.1) // Máximo 300%
+      return newZoom
+    })
+  }
+  
+  const handleZoomOut = () => {
+    setZoomScale(prev => {
+      const newZoom = Math.max(1, prev * 0.9) // Mínimo 100%
+      return newZoom
+    })
   }
 
   const handleCropAndSave = () => {
@@ -119,9 +196,9 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
     const img = imageRef.current
     const container = containerRef.current
 
-    // Definir tamanho do canvas (1920x1080 para banners)
+    // Definir tamanho do canvas (1920x720 para banners)
     const outputWidth = 1920
-    const outputHeight = 1080
+    const outputHeight = 720
     canvas.width = outputWidth
     canvas.height = outputHeight
 
@@ -133,19 +210,19 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
     const containerHeight = container.clientHeight
 
     // Calcular a área visível da imagem no container
-    // A imagem está transformada com scale e position
-    const scaledImgWidth = img.naturalWidth * scale
-    const scaledImgHeight = img.naturalHeight * scale
+    // A imagem está transformada com totalScale (baseScale * zoomScale) e position
+    const scaledImgWidth = img.naturalWidth * totalScale
+    const scaledImgHeight = img.naturalHeight * totalScale
 
     // Posição do topo-esquerdo da imagem escalada no container
     const imgLeft = (containerWidth / 2) - (scaledImgWidth / 2) + position.x
     const imgTop = (containerHeight / 2) - (scaledImgHeight / 2) + position.y
 
     // Calcular qual parte da imagem original está visível
-    const visibleLeft = Math.max(0, -imgLeft / scale)
-    const visibleTop = Math.max(0, -imgTop / scale)
-    const visibleRight = Math.min(img.naturalWidth, (containerWidth - imgLeft) / scale)
-    const visibleBottom = Math.min(img.naturalHeight, (containerHeight - imgTop) / scale)
+    const visibleLeft = Math.max(0, -imgLeft / totalScale)
+    const visibleTop = Math.max(0, -imgTop / totalScale)
+    const visibleRight = Math.min(img.naturalWidth, (containerWidth - imgLeft) / totalScale)
+    const visibleBottom = Math.min(img.naturalHeight, (containerHeight - imgTop) / totalScale)
 
     const sourceX = visibleLeft
     const sourceY = visibleTop
@@ -208,19 +285,22 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
           {/* Container da imagem */}
           <div
             ref={containerRef}
-            className="flex-1 bg-brand-midnight rounded-lg sm:rounded-xl overflow-hidden relative border-2 border-brand-aqua/30 min-h-[200px] sm:min-h-[300px]"
-            style={{ aspectRatio: aspectRatio }}
-            onWheel={handleWheel}
+            className="flex-1 bg-brand-midnight rounded-lg sm:rounded-xl overflow-hidden relative border-2 border-brand-aqua/30 min-h-[150px] sm:min-h-[300px] max-h-[70vh]"
+            style={{ 
+              aspectRatio: aspectRatio,
+              width: '100%'
+            }}
           >
             {imageSrc && (
               <>
                 <div
-                  className="absolute inset-0"
+                  className="absolute inset-0 touch-none"
                   style={{
                     transform: `translate(${position.x}px, ${position.y}px)`,
                     cursor: isDragging ? 'grabbing' : 'grab'
                   }}
                   onMouseDown={handleMouseDown}
+                  onTouchStart={handleTouchStart}
                 >
                   <img
                     ref={imageRef}
@@ -228,35 +308,16 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
                     alt="Preview"
                     className="absolute top-1/2 left-1/2"
                     style={{
-                      transform: `translate(-50%, -50%) scale(${scale}) rotate(${rotation}deg)`,
+                      transform: `translate(-50%, -50%) scale(${totalScale}) rotate(${rotation}deg)`,
                       maxWidth: 'none',
                       height: 'auto',
-                      transition: isDragging || isResizing ? 'none' : 'transform 0.1s',
+                      transition: isDragging ? 'none' : 'transform 0.2s',
                       pointerEvents: 'none'
                     }}
                     onLoad={handleImageLoad}
                     draggable={false}
                   />
                 </div>
-                
-                {/* Handle de redimensionamento - canto inferior direito da imagem */}
-                {imageRef.current && containerRef.current && (
-                  <div
-                    className="absolute w-5 h-5 sm:w-6 sm:h-6 bg-brand-aqua border-2 border-brand-midnight rounded-full cursor-nwse-resize flex items-center justify-center shadow-lg z-10"
-                    style={{
-                      left: `${50 + (position.x / containerRef.current.clientWidth) * 100 + ((imageRef.current.naturalWidth * scale) / containerRef.current.clientWidth) * 50}%`,
-                      top: `${50 + (position.y / containerRef.current.clientHeight) * 100 + ((imageRef.current.naturalHeight * scale) / containerRef.current.clientHeight) * 50}%`,
-                      transform: `translate(-50%, -50%) rotate(${rotation}deg)`
-                    }}
-                    onMouseDown={(e) => {
-                      e.stopPropagation()
-                      setIsDragging(false)
-                      handleResizeStart(e)
-                    }}
-                  >
-                    <div className="w-2 h-2 sm:w-2.5 sm:h-2.5 bg-brand-midnight rounded-full"></div>
-                  </div>
-                )}
               </>
             )}
             
@@ -280,7 +341,7 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
               </button>
 
               <button
-                onClick={() => setScale(prev => Math.min(5, prev * 1.1))}
+                onClick={handleZoomIn}
                 className="p-1.5 sm:p-2 bg-brand-midnight hover:bg-white/10 rounded-lg transition-smooth text-brand-clean"
                 title="Aumentar zoom"
               >
@@ -288,7 +349,7 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
               </button>
 
               <button
-                onClick={() => setScale(prev => Math.max(0.1, prev * 0.9))}
+                onClick={handleZoomOut}
                 className="p-1.5 sm:p-2 bg-brand-midnight hover:bg-white/10 rounded-lg transition-smooth text-brand-clean"
                 title="Diminuir zoom"
               >
@@ -298,11 +359,11 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
               <button
                 onClick={() => {
                   setPosition({ x: 0, y: 0 })
-                  setScale(1)
+                  setZoomScale(1)
                   setRotation(0)
                 }}
                 className="px-2 sm:px-3 py-1.5 sm:py-2 bg-brand-midnight hover:bg-white/10 rounded-lg transition-smooth text-brand-clean text-xs sm:text-sm"
-                title="Resetar"
+                title="Resetar Posição e Zoom"
               >
                 Resetar
               </button>
@@ -328,11 +389,10 @@ export default function ImageEditor({ imageFile, aspectRatio = 16/9, onSave, onC
 
           {/* Instruções */}
           <div className="text-xs text-brand-clean/60 space-y-0.5 sm:space-y-1 px-1">
-            <p className="hidden sm:block">• <strong>Arraste</strong> a imagem para reposicionar</p>
-            <p className="hidden sm:block">• <strong>Arraste o círculo</strong> no canto para redimensionar</p>
-            <p className="hidden sm:block">• Use a <strong>roda do mouse</strong> ou os botões para fazer zoom</p>
+            <p className="hidden sm:block">• <strong>Arraste</strong> a imagem para reposicionar e escolher a área de corte</p>
+            <p className="hidden sm:block">• Use os botões <strong>+/-</strong> para fazer zoom na imagem</p>
             <p className="hidden sm:block">• Clique em <strong>Rotacionar</strong> para girar a imagem</p>
-            <p className="text-[10px] sm:text-xs">• A área destacada (16:9) será o banner final (1920x1080px)</p>
+            <p className="text-[10px] sm:text-xs">• A área destacada (8:3) será o banner final (1920x720px)</p>
           </div>
         </div>
 

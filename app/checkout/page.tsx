@@ -163,19 +163,55 @@ export default function CheckoutPage() {
         metodoPagamento: formData.metodoPagamento,
       })
 
-      const response = await fetch('/api/pagamento/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          plano: plano,
-          metodoPagamento: formData.metodoPagamento,
-        }),
+      console.log('💳 Enviando requisição de checkout...', {
+        plano,
+        metodoPagamento: formData.metodoPagamento,
       })
 
-      const data = await response.json()
+      let response: Response
+      let data: any
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar pagamento')
+      try {
+        response = await fetch('/api/pagamento/checkout', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            plano: plano,
+            metodoPagamento: formData.metodoPagamento,
+          }),
+        })
+
+        console.log('📡 Resposta recebida:', {
+          status: response.status,
+          ok: response.ok,
+          statusText: response.statusText,
+        })
+
+        // Tentar parsear JSON
+        try {
+          data = await response.json()
+        } catch (parseError) {
+          const textResponse = await response.text()
+          console.error('❌ Erro ao parsear JSON:', parseError, 'Resposta:', textResponse)
+          throw new Error('Resposta inválida do servidor. Tente novamente.')
+        }
+
+        console.log('📦 Dados recebidos:', {
+          success: data.success,
+          hasSubscriptionId: !!data.subscriptionId,
+          hasPixQrCode: !!data.pixQrCode,
+          hasPixCopyPaste: !!data.pixCopyPaste,
+          metodoPagamento: data.metodoPagamento,
+          error: data.error,
+        })
+
+        if (!response.ok) {
+          console.error('❌ Erro na resposta:', data)
+          throw new Error(data.error || 'Erro ao processar pagamento')
+        }
+      } catch (fetchError: any) {
+        console.error('❌ Erro na requisição fetch:', fetchError)
+        throw new Error(fetchError.message || 'Erro ao conectar com o servidor. Verifique sua conexão.')
       }
 
       // Se for PIX, SEMPRE redirecionar para página de pagamento (mesmo sem QR code, a página busca depois)

@@ -128,3 +128,5 @@ Se você ainda não desabilitou a obrigatoriedade no Supabase:
 
 **O sistema agora funciona corretamente sem confirmar email automaticamente!**
 
+
+

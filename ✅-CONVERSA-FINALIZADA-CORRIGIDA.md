@@ -85,3 +85,5 @@ Quando a conversa era finalizada no painel de admin, o chat do usuário ainda pe
 
 **✅ Tudo funcionando corretamente!**
 
+
+

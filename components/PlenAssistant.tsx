@@ -17,13 +17,14 @@ interface Message {
 export default function PlenAssistant() {
   const pathname = usePathname()
   const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true) // Estado para verificar se ainda está checando autenticação
   const [isOpen, setIsOpen] = useState(false)
   const synthRef = useRef<SpeechSynthesis | null>(null)
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
       role: 'assistant',
-      content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Como posso ajudar? Você pode me pedir para registrar gastos, consultar dívidas, ver seus gastos da semana, e muito mais!',
+      content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Estou aqui para ajudá-lo a gerenciar suas finanças de forma simples e eficiente.\n\n📝 Para registrar um novo lançamento, você pode me informar de forma natural, por exemplo:\n\n• "ganhei 100 reais de ana"\n• "gastei 40 no shopping"\n• "ganhei 20 da tia"\n• "divida de 2000 sofá"\n\nEu processarei e registrarei essas informações da melhor forma possível. Como posso ajudá-lo hoje?',
       timestamp: new Date()
     }
   ])
@@ -39,6 +40,7 @@ export default function PlenAssistant() {
   useEffect(() => {
     const checkAuth = async () => {
       try {
+        setIsCheckingAuth(true) // Começar verificação
         const supabase = createClient()
         const { data: { user } } = await supabase.auth.getUser()
         setIsAuthenticated(!!user)
@@ -48,7 +50,7 @@ export default function PlenAssistant() {
           setMessages([{
             id: '1',
             role: 'assistant',
-            content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Como posso ajudar? Você pode me pedir para registrar gastos, consultar dívidas, ver seus gastos da semana, e muito mais!',
+            content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Estou aqui para ajudá-lo a gerenciar suas finanças de forma simples e eficiente.\n\n📝 Para registrar um novo lançamento, você pode me informar de forma natural, por exemplo:\n\n• "ganhei 100 reais de ana"\n• "gastei 40 no shopping"\n• "ganhei 20 da tia"\n• "divida de 2000 sofá"\n\nEu processarei e registrarei essas informações da melhor forma possível. Como posso ajudá-lo hoje?',
             timestamp: new Date()
           }])
           setInput('')
@@ -57,6 +59,8 @@ export default function PlenAssistant() {
       } catch (error) {
         console.error('Erro ao verificar autenticação:', error)
         setIsAuthenticated(false)
+      } finally {
+        setIsCheckingAuth(false) // Finalizar verificação
       }
     }
 
@@ -67,16 +71,18 @@ export default function PlenAssistant() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT' || !session) {
         setIsAuthenticated(false)
+        setIsCheckingAuth(false) // Garantir que não fique travado
         setMessages([{
           id: '1',
           role: 'assistant',
-          content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Como posso ajudar? Você pode me pedir para registrar gastos, consultar dívidas, ver seus gastos da semana, e muito mais!',
+          content: 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Estou aqui para ajudá-lo a gerenciar suas finanças de forma simples e eficiente.\n\n📝 Para registrar um novo lançamento, você pode me informar de forma natural, por exemplo:\n\n• "ganhei 100 reais de ana"\n• "gastei 40 no shopping"\n• "ganhei 20 da tia"\n• "divida de 2000 sofá"\n\nEu processarei e registrarei essas informações da melhor forma possível. Como posso ajudá-lo hoje?',
           timestamp: new Date()
         }])
         setInput('')
         setIsOpen(false)
       } else if (event === 'SIGNED_IN' && session) {
         setIsAuthenticated(true)
+        setIsCheckingAuth(false) // Garantir que não fique travado
       }
     })
 
@@ -361,13 +367,20 @@ export default function PlenAssistant() {
     await handleSend(messageText)
   }
 
-  // Ocultar no painel de admin
-  if (pathname?.startsWith('/administracaosecr')) {
+  // PRIMEIRO: Não renderizar nada enquanto está verificando autenticação
+  if (isCheckingAuth) {
     return null
   }
 
-  // Só mostrar se o usuário estiver autenticado
+  // SEGUNDO: Só mostrar se o usuário estiver autenticado (verificação mais importante)
   if (!isAuthenticated) {
+    return null
+  }
+
+  // TERCEIRO: Ocultar em rotas públicas, admin e páginas de erro
+  const publicRoutes = ['/', '/login', '/cadastro', '/planos', '/termos', '/privacidade', '/suporte']
+  // Se pathname for null ou undefined, não renderizar (pode ser página de erro)
+  if (!pathname || pathname?.startsWith('/administracaosecr') || publicRoutes.includes(pathname)) {
     return null
   }
 
@@ -456,10 +469,24 @@ export default function PlenAssistant() {
                 >
                   <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
                   {message.actionData && (
-                    <div className="mt-2 pt-2 border-t border-white/20 dark:border-white/10">
-                      <p className="text-xs opacity-80">
-                        ✓ {message.actionData.message || 'Ação executada'}
-                      </p>
+                    <div className="mt-3 pt-3 border-t border-white/20 dark:border-white/10">
+                      {message.actionData.action === 'upgrade_required' ? (
+                        <div className="space-y-2">
+                          <p className="text-xs opacity-80 mb-2">
+                            {message.actionData.featureName} disponível no plano {message.actionData.requiredPlan}
+                          </p>
+                          <a
+                            href={message.actionData.buttonUrl || '/configuracoes?tab=perfil'}
+                            className="inline-block px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm shadow-sm"
+                          >
+                            {message.actionData.buttonText || 'Assinar Plano'}
+                          </a>
+                        </div>
+                      ) : (
+                        <p className="text-xs opacity-80">
+                          ✓ {message.actionData.message || 'Ação executada'}
+                        </p>
+                      )}
                     </div>
                   )}
                   {/* Botões de confirmação - mostrar apenas na última mensagem do assistente se houver confirmação pendente */}

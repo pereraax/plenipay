@@ -98,3 +98,5 @@ SELECT COUNT(*) as total_usuarios FROM get_all_profiles();
 --    SUPABASE_SERVICE_ROLE_KEY=sua_service_role_key_aqui
 -- ============================================
 
+
+

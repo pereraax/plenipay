@@ -11,12 +11,36 @@ const VALORES_PLANOS = {
 export async function POST(request: NextRequest) {
   try {
     // Verificar se a API key está configurada
-    const apiKey = process.env.ASAAS_API_KEY
+    // IMPORTANTE: Next.js pode não carregar variáveis que começam com $ do .env.local
+    // Vamos tentar ler diretamente do arquivo como fallback
+    let apiKey = process.env.ASAAS_API_KEY
+    
+    // Se não encontrou no process.env, tentar ler do arquivo diretamente
+    if (!apiKey) {
+      try {
+        const fs = require('fs')
+        const path = require('path')
+        const envPath = path.join(process.cwd(), '.env.local')
+        const envContent = fs.readFileSync(envPath, 'utf8')
+        const match = envContent.match(/^ASAAS_API_KEY=(.+)$/m)
+        if (match) {
+          apiKey = match[1].trim()
+          console.log('✅ API Key carregada diretamente do arquivo .env.local')
+        }
+      } catch (fileError: any) {
+        console.error('❌ Erro ao ler .env.local:', fileError.message)
+      }
+    }
+    
+    const apiUrl = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3'
+    
     console.log('🔑 Verificando API Key no servidor:', {
       exists: !!apiKey,
       length: apiKey?.length || 0,
       prefix: apiKey ? apiKey.substring(0, 20) + '...' : 'N/A',
       startsWithDollar: apiKey?.startsWith('$') || false,
+      startsWithEscape: apiKey?.startsWith('\\$') || false,
+      apiUrl,
     })
     
     if (!apiKey) {
@@ -26,7 +50,123 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
+    
+    // Limpar API key - remover aspas, escapes e caracteres especiais
+    let cleanApiKey = apiKey.trim()
+    
+    // Se a API key tem apenas 1 caractere e é uma aspas, significa que o .env.local está mal formatado
+    if (cleanApiKey.length === 1 && (cleanApiKey === '"' || cleanApiKey === "'")) {
+      console.error('❌ ERRO CRÍTICO: API Key está sendo lida como apenas uma aspas!')
+      console.error('❌ Verifique o arquivo .env.local - a API key deve estar SEM aspas')
+      console.error('❌ Formato correto: ASAAS_API_KEY=$aact_prod_...')
+      console.error('❌ Formato ERRADO: ASAAS_API_KEY="$aact_prod_..."')
+      return NextResponse.json(
+        { error: 'API Key mal formatada no .env.local. Remova as aspas da variável ASAAS_API_KEY.' },
+        { status: 500 }
+      )
+    }
+    
+    // Remover aspas no início e fim se houver (mas só se tiver mais de 2 caracteres)
+    if (cleanApiKey.length > 2 && cleanApiKey.startsWith('"') && cleanApiKey.endsWith('"')) {
+      cleanApiKey = cleanApiKey.slice(1, -1)
+      console.log('🔧 API Key tinha aspas duplas, removidas')
+    }
+    if (cleanApiKey.length > 2 && cleanApiKey.startsWith("'") && cleanApiKey.endsWith("'")) {
+      cleanApiKey = cleanApiKey.slice(1, -1)
+      console.log('🔧 API Key tinha aspas simples, removidas')
+    }
+    // Remover escape de $ se houver
+    if (cleanApiKey.startsWith('\\$')) {
+      cleanApiKey = cleanApiKey.substring(1)
+      console.log('🔧 API Key tinha escape, removido')
+    }
+    
+    // IMPORTANTE: O $ no início faz parte da API key do Asaas, NÃO remover!
+    // Mas vamos verificar se há caracteres invisíveis ou quebras de linha
+    cleanApiKey = cleanApiKey.replace(/\r\n/g, '').replace(/\n/g, '').replace(/\r/g, '')
+    
+    console.log('🔧 API Key limpa, tamanho:', cleanApiKey.length)
+    console.log('🔧 API Key primeiro caractere:', cleanApiKey.substring(0, 1))
+    console.log('🔧 API Key últimos 10 caracteres:', cleanApiKey.substring(cleanApiKey.length - 10))
+    
+    // Validar que a API key tem tamanho mínimo
+    if (cleanApiKey.length < 50) {
+      console.error('❌ API Key muito curta! Tamanho:', cleanApiKey.length)
+      console.error('❌ Uma API key válida do Asaas deve ter pelo menos 50 caracteres')
+      return NextResponse.json(
+        { error: 'API Key inválida. Verifique o arquivo .env.local.' },
+        { status: 500 }
+      )
+    }
+    
+    // Testar API key rapidamente antes de continuar
+    try {
+      console.log('🧪 Testando API key antes de processar pagamento...')
+      console.log('🔍 URL:', `${apiUrl}/customers?limit=1`)
+      console.log('🔍 API Key (primeiros 20 chars):', cleanApiKey.substring(0, 20) + '...')
+      console.log('🔍 API Key (tamanho):', cleanApiKey.length)
+      
+      const testResponse = await fetch(`${apiUrl}/customers?limit=1`, {
+        method: 'GET',
+        headers: {
+          'access_token': cleanApiKey,
+          'Content-Type': 'application/json',
+        },
+      })
+      
+      console.log('📡 Resposta do teste:', {
+        status: testResponse.status,
+        ok: testResponse.ok,
+        statusText: testResponse.statusText,
+      })
+      
+      if (!testResponse.ok) {
+        const errorText = await testResponse.text()
+        let errorData: any = {}
+        try {
+          errorData = JSON.parse(errorText)
+        } catch {
+          errorData = { raw: errorText }
+        }
+        
+        console.error('❌ API Key inválida! Status:', testResponse.status)
+        console.error('❌ Erro completo:', JSON.stringify(errorData, null, 2))
+        console.error('❌ API Key usada (primeiros 30 chars):', cleanApiKey.substring(0, 30))
+        
+        // Verificar se é problema de ambiente (sandbox vs produção)
+        if (apiUrl.includes('sandbox') && cleanApiKey.includes('prod')) {
+          console.error('⚠️ ATENÇÃO: API key de PRODUÇÃO sendo usada com URL de SANDBOX!')
+          return NextResponse.json(
+            { error: 'Incompatibilidade: API key de produção com URL de sandbox. Verifique ASAAS_API_URL no .env.local.' },
+            { status: 401 }
+          )
+        }
+        if (apiUrl.includes('www.asaas.com') && cleanApiKey.includes('sandbox')) {
+          console.error('⚠️ ATENÇÃO: API key de SANDBOX sendo usada com URL de PRODUÇÃO!')
+          return NextResponse.json(
+            { error: 'Incompatibilidade: API key de sandbox com URL de produção. Verifique ASAAS_API_URL no .env.local.' },
+            { status: 401 }
+          )
+        }
+        
+        return NextResponse.json(
+          { error: 'API Key do Asaas inválida ou sem permissão. Verifique se a chave está correta no painel do Asaas e se está habilitada.' },
+          { status: 401 }
+        )
+      }
+      console.log('✅ API Key válida!')
+    } catch (testError: any) {
+      console.error('❌ Erro ao testar API Key:', testError)
+      console.error('❌ Stack:', testError.stack)
+      return NextResponse.json(
+        { error: 'Erro ao validar API Key do Asaas: ' + testError.message },
+        { status: 500 }
+      )
+    }
 
+    // Usar cleanApiKey para todas as chamadas
+    const apiKeyToUse = cleanApiKey
+    
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
@@ -268,12 +408,6 @@ export async function POST(request: NextRequest) {
           console.log('🔑 Código PIX encontrado:', !!pixCopyPaste)
           
           // Buscar QR code PIX - tentar múltiplas formas
-          const apiUrl = process.env.ASAAS_API_URL || 'https://www.asaas.com/api/v3'
-          let apiKey = process.env.ASAAS_API_KEY!.trim()
-          if (apiKey.startsWith('\\$')) {
-            apiKey = apiKey.substring(1) // Remove o escape
-          }
-          
           // Tentar buscar QR code diretamente do pagamento
           try {
             console.log('🔍 Buscando QR code PIX em:', `${apiUrl}/payments/${primeiroPagamento.id}/pixQrCode`)
@@ -281,7 +415,7 @@ export async function POST(request: NextRequest) {
               `${apiUrl}/payments/${primeiroPagamento.id}/pixQrCode`,
               {
                 headers: {
-                  'access_token': apiKey,
+                  'access_token': apiKeyToUse,
                 },
               }
             )
@@ -329,16 +463,11 @@ export async function POST(request: NextRequest) {
             
             // Tentar buscar QR code novamente
             try {
-              const apiUrl = process.env.ASAAS_API_URL || 'https://www.asaas.com/api/v3'
-              let apiKey = process.env.ASAAS_API_KEY!.trim()
-              if (apiKey.startsWith('\\$')) {
-                apiKey = apiKey.substring(1)
-              }
               const qrCodeResponse = await fetch(
                 `${apiUrl}/payments/${pagamentosRetry[0].id}/pixQrCode`,
                 {
                   headers: {
-                    'access_token': apiKey,
+                    'access_token': apiKeyToUse,
                   },
                 }
               )

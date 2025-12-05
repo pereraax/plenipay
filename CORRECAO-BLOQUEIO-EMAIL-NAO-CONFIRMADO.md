@@ -108,3 +108,5 @@
 
 **Usuários sem email confirmado agora estão completamente bloqueados até confirmarem o email!**
 
+
+

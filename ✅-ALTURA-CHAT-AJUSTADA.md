@@ -44,3 +44,5 @@ O chat estava ocupando quase toda a altura da tela, indo até o final. Agora tem
 
 **✅ Altura ajustada com sucesso!**
 
+
+

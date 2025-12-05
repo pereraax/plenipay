@@ -93,3 +93,5 @@ O email estava sendo confirmado automaticamente pelo bypass (13 segundos após c
 
 **Emails confirmados pelo bypass agora são corretamente identificados e tratados como não confirmados!**
 
+
+

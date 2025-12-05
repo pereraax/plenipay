@@ -49,33 +49,13 @@ export default function QuickActionCard({
           return
         }
         
-        // CRÍTICO: Verificar o status REAL do email
-        // Se email_confirmed_at é null ou undefined, email NÃO está confirmado
+        // Verificar o status REAL do email
+        // Se email_confirmed_at existe e não é null, está confirmado
         const emailConfirmedAt = user?.email_confirmed_at
-        const createdAt = user?.created_at
+        const isConfirmed = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== ''
         
-        let isConfirmed = false
-        
-        // Se não tem email_confirmed_at, definitivamente não está confirmado
-        if (!emailConfirmedAt) {
-          isConfirmed = false
-        } else if (emailConfirmedAt && createdAt) {
-          // Se ambos existem, verificar se foi confirmado manualmente
-          try {
-            const confirmedDate = new Date(emailConfirmedAt)
-            const createdDate = new Date(createdAt)
-            const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
-            
-            // CRÍTICO: Se foi confirmado em menos de 30 segundos, foi provavelmente pelo bypass
-            // Considerar como NÃO confirmado para forçar verificação manual
-            // Se foi confirmado em 30+ segundos, provavelmente foi manual (contar como confirmado)
-            isConfirmed = diffSeconds >= 30
-          } catch (error) {
-            console.error('Erro ao comparar datas:', error)
-            // Em caso de erro, considerar como não confirmado por segurança
-            isConfirmed = false
-          }
-        }
+        // Forçar refresh da sessão para garantir estado atualizado
+        await supabase.auth.refreshSession()
         
         console.log('🔍 QuickActionCard - Status de email:', {
           email: user.email,

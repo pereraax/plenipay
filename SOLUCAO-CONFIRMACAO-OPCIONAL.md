@@ -84,3 +84,5 @@ Vou implementar a solução no código agora. Ela vai:
 3. Permitir login mesmo sem confirmação
 4. Manter avisos para o usuário
 
+
+

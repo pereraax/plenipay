@@ -208,3 +208,5 @@ GROQ_MODEL=llama-3.1-8b-instant
 
 **🎉 Escolha Groq para uma experiência gratuita e rápida!**
 
+
+

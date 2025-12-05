@@ -78,3 +78,5 @@ GROUP BY
 -- FROM chat_conversations
 -- WHERE user_id = 'AQUI-VAI-O-UUID-DO-USUARIO';
 
+
+

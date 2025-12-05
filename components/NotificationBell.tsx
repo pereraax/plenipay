@@ -1,6 +1,7 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { Bell, CheckCircle2, AlertCircle, Info, X, Sparkles } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { format, formatDistanceToNow } from 'date-fns'
@@ -17,7 +18,68 @@ interface Notification {
 export default function NotificationBell() {
   const [isOpen, setIsOpen] = useState(false)
   const [notifications, setNotifications] = useState<Notification[]>([])
+  const [popupPosition, setPopupPosition] = useState({ top: 0, right: 0, width: 380, maxHeight: 600 })
+  const [isMobile, setIsMobile] = useState(false)
+  const buttonRef = useRef<HTMLButtonElement>(null)
   const router = useRouter()
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 640)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  useEffect(() => {
+    if (isOpen && buttonRef.current) {
+      const updatePosition = () => {
+        if (!buttonRef.current) return
+        const rect = buttonRef.current.getBoundingClientRect()
+        const viewportWidth = window.innerWidth
+        const viewportHeight = window.innerHeight
+        
+        if (isMobile) {
+          // MOBILE: usar fixed positioning com cálculos precisos
+          const popupWidth = Math.min(380, viewportWidth - 16)
+          const top = rect.bottom + 8
+          const buttonRightEdge = viewportWidth - rect.right
+          const right = Math.max(8, buttonRightEdge)
+          const calculatedRight = Math.min(right, viewportWidth - popupWidth - 8)
+          const finalWidth = Math.min(popupWidth, viewportWidth - calculatedRight - 8)
+          const availableHeight = viewportHeight - top - 16
+          const maxHeight = Math.max(200, Math.min(availableHeight, 600))
+          
+          setPopupPosition({
+            top,
+            right: calculatedRight,
+            width: finalWidth,
+            maxHeight
+          })
+        } else {
+          // DESKTOP: usar absolute positioning relativo ao container
+          // Não precisa calcular posição, o CSS vai cuidar disso
+          setPopupPosition({
+            top: 0, // Não usado no desktop (usa top-full do CSS)
+            right: 0, // Não usado no desktop (usa right-0 do CSS)
+            width: 380, // Largura fixa no desktop
+            maxHeight: 600 // Altura máxima no desktop
+          })
+        }
+      }
+      // Pequeno delay para garantir DOM atualizado
+      const timeoutId = setTimeout(updatePosition, 10)
+      updatePosition()
+      window.addEventListener('resize', updatePosition)
+      window.addEventListener('scroll', updatePosition, true)
+      return () => {
+        clearTimeout(timeoutId)
+        window.removeEventListener('resize', updatePosition)
+        window.removeEventListener('scroll', updatePosition, true)
+      }
+    }
+  }, [isOpen])
 
   useEffect(() => {
     // Carregar notificações do localStorage apenas uma vez
@@ -186,8 +248,9 @@ export default function NotificationBell() {
   return (
     <div className="relative flex items-center">
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2.5 text-brand-midnight dark:text-brand-clean hover:bg-brand-clean dark:hover:bg-white/10 rounded-xl transition-all duration-300 flex items-center justify-center group hover:scale-110 active:scale-95"
+        className="relative p-2.5 text-brand-midnight dark:text-brand-clean hover:bg-brand-clean dark:hover:bg-white/10 rounded-xl transition-all duration-300 flex items-center justify-center group hover:scale-110 active:scale-95 z-50"
       >
         <div className="relative">
           <Bell size={24} strokeWidth={2.5} className="relative z-10 transition-transform duration-300 group-hover:rotate-12" />
@@ -205,10 +268,19 @@ export default function NotificationBell() {
       {isOpen && (
         <>
           <div
-            className="fixed inset-0 z-[90] bg-transparent"
+            className="fixed inset-0 z-[9998] bg-transparent"
             onClick={() => setIsOpen(false)}
           />
-          <div className="fixed top-[120px] sm:top-[130px] right-2 sm:right-4 lg:right-6 w-[calc(100vw-1rem)] sm:w-[380px] max-w-[calc(100vw-1rem)] sm:max-w-[380px] bg-gradient-to-br from-white/98 via-white/95 to-gray-50/90 dark:from-brand-midnight/98 dark:via-brand-royal/95 dark:to-brand-midnight/90 backdrop-blur-2xl rounded-2xl shadow-2xl z-[95] max-h-[calc(100vh-8rem)] sm:max-h-[calc(100vh-9rem)] overflow-hidden flex flex-col animate-scale-up pointer-events-auto border border-gray-200/30 dark:border-brand-aqua/20 ring-1 ring-black/5 dark:ring-white/10">
+          <div 
+            className={`${isMobile ? 'fixed' : 'absolute top-full right-0 mt-2'} bg-gradient-to-br from-white/98 via-white/95 to-gray-50/90 dark:from-brand-midnight/98 dark:via-brand-royal/95 dark:to-brand-midnight/90 backdrop-blur-2xl rounded-2xl shadow-2xl z-[9999] overflow-hidden flex flex-col pointer-events-auto border border-gray-200/30 dark:border-brand-aqua/20 ring-1 ring-black/5 dark:ring-white/10 ${isMobile ? 'w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)]' : 'w-[380px] max-w-[380px] max-h-[calc(100vh-10rem)]'}`}
+            style={isMobile ? {
+              top: `${popupPosition.top}px`,
+              right: `${popupPosition.right}px`,
+              width: `${popupPosition.width}px`,
+              maxWidth: `${popupPosition.width}px`,
+              maxHeight: `${popupPosition.maxHeight}px`
+            } : {}}
+          >
             {/* Header compacto */}
             <div className="relative p-4 border-b border-gray-200/40 dark:border-brand-aqua/15 bg-gradient-to-r from-brand-aqua/8 via-purple-500/5 to-brand-aqua/8 dark:from-brand-midnight/90 dark:via-brand-royal/80 dark:to-brand-midnight/90 overflow-hidden">
               <div className="relative flex items-center justify-between">
@@ -241,7 +313,7 @@ export default function NotificationBell() {
             </div>
             
             {/* Lista de notificações compacta */}
-            <div className="overflow-y-auto flex-1 bg-gradient-to-b from-gray-50/30 via-white/20 to-gray-50/30 dark:from-brand-midnight/50 dark:via-brand-royal/30 dark:to-brand-midnight/50 custom-scrollbar">
+            <div className="overflow-y-auto flex-1 min-h-0 bg-gradient-to-b from-gray-50/30 via-white/20 to-gray-50/30 dark:from-brand-midnight/50 dark:via-brand-royal/30 dark:to-brand-midnight/50 custom-scrollbar">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">

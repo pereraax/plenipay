@@ -116,6 +116,7 @@ export async function POST(request: NextRequest) {
 
         // Passo 3: Desconfirmar email novamente (mantém como não confirmado)
         // CRÍTICO: Usar email_confirm: false E também limpar email_confirmed_at explicitamente
+        console.log('🔧 Desconfirmando email após criar sessão...')
         const { error: unconfirmError } = await adminClient.auth.admin.updateUserById(
           user.id,
           {
@@ -127,19 +128,37 @@ export async function POST(request: NextRequest) {
 
         if (unconfirmError) {
           console.error('⚠️ Erro ao desconfirmar email após criar sessão:', unconfirmError)
+          // Tentar novamente após um delay
+          await new Promise(resolve => setTimeout(resolve, 1000))
+          const { error: retryError } = await adminClient.auth.admin.updateUserById(
+            user.id,
+            { email_confirm: false }
+          )
+          if (retryError) {
+            console.error('⚠️ Erro ao desconfirmar email na segunda tentativa:', retryError)
+          } else {
+            console.log('✅ Email desconfirmado na segunda tentativa')
+          }
         } else {
           console.log('✅ Email desconfirmado novamente - status mantido como não confirmado')
+        }
+        
+        // Aguardar mais tempo para garantir que a atualização foi processada
+        await new Promise(resolve => setTimeout(resolve, 2000))
+        
+        // Verificar novamente se foi desconfirmado corretamente
+        const { data: verifyUnconfirm } = await adminClient.auth.admin.getUserById(user.id)
+        if (verifyUnconfirm?.user) {
+          console.log('✅ Verificação pós-desconfirmação:', {
+            email_confirmed_at: verifyUnconfirm.user.email_confirmed_at,
+            email_confirm: verifyUnconfirm.user.email_confirmed_at ? 'AINDA CONFIRMADO (erro!)' : 'DESCONFIRMADO (correto)'
+          })
           
-          // Aguardar um pouco para garantir que a atualização foi processada
-          await new Promise(resolve => setTimeout(resolve, 500))
-          
-          // Verificar novamente se foi desconfirmado corretamente
-          const { data: verifyUnconfirm } = await adminClient.auth.admin.getUserById(user.id)
-          if (verifyUnconfirm?.user) {
-            console.log('✅ Verificação pós-desconfirmação:', {
-              email_confirmed_at: verifyUnconfirm.user.email_confirmed_at,
-              email_confirm: verifyUnconfirm.user.email_confirmed_at ? 'AINDA CONFIRMADO (erro!)' : 'DESCONFIRMADO (correto)'
-            })
+          // Se ainda estiver confirmado, tentar limpar novamente
+          if (verifyUnconfirm.user.email_confirmed_at) {
+            console.log('⚠️ Email ainda está confirmado - tentando limpar novamente...')
+            await adminClient.auth.admin.updateUserById(user.id, { email_confirm: false })
+            await new Promise(resolve => setTimeout(resolve, 1000))
           }
         }
 

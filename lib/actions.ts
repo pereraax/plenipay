@@ -352,11 +352,31 @@ export async function obterRegistros(filtros: any = {}) {
     return { data: [], error: 'Não autenticado' }
   }
 
-  // CRÍTICO: Sempre filtrar por user_id do usuário autenticado primeiro!
+  // CRÍTICO: Buscar todos os usuários da tabela users que pertencem a este account_owner
+  // e então buscar registros desses usuários
+  const { data: usuarios, error: usuariosError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('account_owner_id', user.id)
+  
+  if (usuariosError) {
+    console.error('Erro ao buscar usuários:', usuariosError)
+    return { data: [], error: usuariosError.message }
+  }
+  
+  // Se não há usuários, retornar vazio
+  if (!usuarios || usuarios.length === 0) {
+    return { data: [] }
+  }
+  
+  // Extrair IDs dos usuários
+  const userIds = usuarios.map(u => u.id)
+  
+  // Buscar registros onde user_id está na lista de usuários do account_owner
   let query = supabase
     .from('registros')
     .select('*')
-    .eq('user_id', user.id) // SEMPRE filtrar apenas registros do usuário atual
+    .in('user_id', userIds) // Filtrar por todos os usuários do account_owner
     .order('data_registro', { ascending: false })
 
   // Aplicar filtros adicionais
@@ -396,12 +416,24 @@ export async function obterDividas() {
     return { data: [], error: 'Não autenticado' }
   }
 
-  // CRÍTICO: Filtrar apenas dívidas do usuário atual!
+  // Buscar todos os usuários da tabela users que pertencem a este account_owner
+  const { data: usuarios, error: usuariosError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('account_owner_id', user.id)
+  
+  if (usuariosError || !usuarios || usuarios.length === 0) {
+    return { data: [] }
+  }
+  
+  const userIds = usuarios.map(u => u.id)
+  
+  // Buscar dívidas onde user_id está na lista de usuários do account_owner
   const { data, error } = await supabase
     .from('registros')
     .select('*')
     .eq('tipo', 'divida')
-    .eq('user_id', user.id) // FILTRAR APENAS DÍVIDAS DO USUÁRIO ATUAL
+    .in('user_id', userIds) // Filtrar por todos os usuários do account_owner
     .order('data_registro', { ascending: false })
 
   if (error) {
@@ -420,35 +452,53 @@ export async function obterUsuarios() {
     return { data: [], error: 'Não autenticado' }
   }
 
+  // CRÍTICO: Filtrar apenas usuários que pertencem ao account_owner_id do usuário autenticado
+  // Isso garante que cada conta veja apenas seus próprios usuários/pessoas
   const { data, error } = await supabase
     .from('users')
     .select('*')
+    .eq('account_owner_id', user.id) // Filtrar por account_owner_id
     .order('nome', { ascending: true })
 
   if (error) {
+    console.error('❌ Erro ao buscar usuários:', error)
     return { data: [], error: error.message }
   }
+
+  console.log('✅ Usuários encontrados:', data?.length || 0, 'para account_owner:', user.id)
 
   return { data: data || [] }
 }
 
 export async function criarUsuario(formData: FormData) {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) {
+    return { error: 'Não autenticado' }
+  }
 
   const nome = formData.get('nome') as string
   if (!nome || !nome.trim()) {
     return { error: 'Nome é obrigatório' }
   }
 
+  // CRÍTICO: Sempre associar o usuário ao account_owner_id do usuário autenticado
   const { data, error } = await supabase
     .from('users')
-    .insert([{ nome: nome.trim() }])
+    .insert([{ 
+      nome: nome.trim(),
+      account_owner_id: user.id // Sempre associar ao usuário autenticado
+    }])
     .select()
     .single()
 
   if (error) {
+    console.error('❌ Erro ao criar usuário:', error)
     return { error: error.message }
   }
+
+  console.log('✅ Usuário criado na tabela users:', data.id, 'para account_owner:', user.id)
 
   revalidatePath('/configuracoes')
   revalidateTag('usuarios')
@@ -491,12 +541,23 @@ export async function obterEstatisticas() {
     return { error: 'Não autenticado' }
   }
 
-  // CRÍTICO: Filtrar apenas registros do usuário atual!
-  // Buscar registros onde user_id é o ID do usuário autenticado
+  // CRÍTICO: Buscar todos os usuários da tabela users que pertencem a este account_owner
+  const { data: usuarios, error: usuariosError } = await supabase
+    .from('users')
+    .select('id')
+    .eq('account_owner_id', user.id)
+  
+  if (usuariosError || !usuarios || usuarios.length === 0) {
+    return { error: 'Nenhum usuário encontrado' }
+  }
+  
+  const userIds = usuarios.map(u => u.id)
+  
+  // Buscar registros onde user_id está na lista de usuários do account_owner
   const { data: registros, error } = await supabase
     .from('registros')
     .select('tipo, valor, parcelas_totais, parcelas_pagas, user_id')
-    .eq('user_id', user.id) // FILTRAR APENAS REGISTROS DO USUÁRIO ATUAL
+    .in('user_id', userIds) // Filtrar por todos os usuários do account_owner
 
   if (error) {
     console.error('Erro ao buscar estatísticas:', error)

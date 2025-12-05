@@ -72,3 +72,5 @@ O popup inteiro estava rolável, causando problemas de UX. Agora apenas o conte�
 
 **✅ Problema crítico resolvido!**
 
+
+

@@ -216,10 +216,10 @@ export default function AdminChatPage() {
       <div className="w-full" style={{ marginLeft: '-18rem', width: 'calc(100% + 18rem)' }}>
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-display font-bold text-brand-clean mb-2">
+          <h1 className="text-3xl font-display font-bold text-brand-clean mb-2" style={{ fontWeight: 700 }}>
             Chat de Suporte
           </h1>
-          <p className="text-brand-clean/70">
+          <p className="font-semibold text-brand-clean/70" style={{ fontWeight: 600 }}>
             Gerencie todas as conversas com os clientes
           </p>
         </div>
@@ -232,10 +232,10 @@ export default function AdminChatPage() {
                 <MessageCircle size={24} className="text-blue-400" strokeWidth={2} />
               </div>
             </div>
-            <p className="text-sm text-brand-clean/70 mb-1 font-medium">
+            <p className="text-sm text-brand-clean/70 mb-1 font-bold" style={{ fontWeight: 700 }}>
               Total de Conversas
             </p>
-            <p className="text-3xl font-display text-blue-400">
+            <p className="text-3xl font-display font-bold text-blue-400" style={{ fontWeight: 700 }}>
               {totalConversations}
             </p>
           </div>
@@ -246,10 +246,10 @@ export default function AdminChatPage() {
                 <MessageCircle size={24} className="text-red-400" strokeWidth={2} />
               </div>
             </div>
-            <p className="text-sm text-brand-clean/70 mb-1 font-medium">
+            <p className="text-sm text-brand-clean/70 mb-1 font-bold" style={{ fontWeight: 700 }}>
               Mensagens Não Lidas
             </p>
-            <p className="text-3xl font-display text-red-400">
+            <p className="text-3xl font-display font-bold text-red-400" style={{ fontWeight: 700 }}>
               {totalUnread}
             </p>
           </div>
@@ -260,10 +260,10 @@ export default function AdminChatPage() {
                 <MessageCircle size={24} className="text-green-400" strokeWidth={2} />
               </div>
             </div>
-            <p className="text-sm text-brand-clean/70 mb-1 font-medium">
+            <p className="text-sm text-brand-clean/70 mb-1 font-bold" style={{ fontWeight: 700 }}>
               Conversas Ativas (24h)
             </p>
-            <p className="text-3xl font-display text-green-400">
+            <p className="text-3xl font-display font-bold text-green-400" style={{ fontWeight: 700 }}>
               {activeConversations}
             </p>
           </div>

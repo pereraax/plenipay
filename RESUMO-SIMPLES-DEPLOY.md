@@ -114,3 +114,5 @@ A estrutura de pastas em `app/` vira rotas automaticamente:
 Para instruções detalhadas passo a passo:
 - `PASSO-A-PASSO-PAINEL-WEB-HOSTINGER.md`
 
+
+

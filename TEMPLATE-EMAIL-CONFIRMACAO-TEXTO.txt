@@ -1,0 +1,25 @@
+========================================
+CONFIRME SEU CADASTRO
+========================================
+
+Olá! 👋
+
+Bem-vindo(a) à nossa plataforma! Estamos felizes em tê-lo(a) conosco.
+
+Para ativar sua conta e começar a usar todos os recursos disponíveis, clique no link abaixo para confirmar seu endereço de email:
+
+{{ .ConfirmationURL }}
+
+---
+
+⚠️ IMPORTANTE
+
+Este link é válido por 24 horas. Se você não solicitou esta confirmação, pode ignorar este email com segurança.
+
+---
+
+Este email foi enviado para confirmar seu cadastro em nossa plataforma.
+Se você não solicitou este cadastro, pode ignorar este email.
+
+© 2024 Sistema de Contas. Todos os direitos reservados.
+

@@ -8,7 +8,8 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/components/NotificationBell'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu from '@/components/MobileMenu'
+import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import Logo from '@/components/Logo'
 
 const planos = [
   {
@@ -235,111 +236,126 @@ export default function UpgradePage() {
       <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
+        {/* Header Mobile */}
+        <div className="lg:hidden pt-4 pb-2 px-3 sm:px-4">
+          <div className="flex justify-center mb-2">
+            <div className="w-40 sm:w-52">
+              <Logo />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-3">
+            <MenuButton />
+            <h1 className="text-xl sm:text-2xl font-display font-bold text-white leading-none">
+              Upgrade de Plano
+            </h1>
+          </div>
+        </div>
+        
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-12 pb-20 px-4 lg:px-8">
+        <section className="relative overflow-hidden pt-4 sm:pt-6 lg:pt-12 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-4 lg:px-8">
           <div className="absolute inset-0 bg-gradient-to-br from-brand-aqua/10 via-transparent to-brand-royal/20"></div>
           <div className="max-w-7xl mx-auto relative z-10">
-            <div className="text-center mb-12">
-              <div className="inline-flex items-center gap-2 px-4 py-2 bg-brand-aqua/20 rounded-full mb-6">
-                <Sparkles className="text-brand-aqua" size={20} />
-                <span className="text-brand-aqua font-semibold">Transforme sua vida financeira hoje</span>
+            <div className="text-center mb-8 sm:mb-10 lg:mb-12">
+              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-aqua/20 rounded-full mb-4 sm:mb-5 lg:mb-6">
+                <Sparkles className="text-brand-aqua" size={16} style={{ width: '16px', height: '16px' }} />
+                <span className="text-brand-aqua font-semibold text-xs sm:text-sm lg:text-base">Transforme sua vida financeira hoje</span>
               </div>
               
-              <h1 className="text-5xl md:text-6xl font-display font-bold text-white mb-6 leading-tight">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-white mb-4 sm:mb-5 lg:mb-6 leading-tight px-2">
                 Pare de Gastar Sem Controle.
                 <br />
                 <span className="text-brand-aqua">Comece a Viver Seus Sonhos.</span>
               </h1>
               
-              <p className="text-xl text-brand-clean/80 max-w-3xl mx-auto mb-8 leading-relaxed">
+              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-brand-clean/80 max-w-3xl mx-auto mb-6 sm:mb-7 lg:mb-8 leading-relaxed px-3">
                 Você já tentou economizar sozinho e não conseguiu? <strong className="text-white">Não é culpa sua.</strong> 
                 Você só precisa das ferramentas certas. Milhares de pessoas já transformaram suas finanças com o PLENIPAY.
               </p>
 
-              <div className="flex flex-wrap items-center justify-center gap-6 text-sm text-brand-clean/70 mb-8">
+              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-brand-clean/70 mb-6 sm:mb-7 lg:mb-8 px-3">
                 <div className="flex items-center gap-2">
-                  <Check className="text-green-400" size={20} />
+                  <Check className="text-green-400" size={16} style={{ width: '16px', height: '16px' }} />
                   <span>7 dias grátis para testar</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="text-green-400" size={20} />
+                  <Check className="text-green-400" size={16} style={{ width: '16px', height: '16px' }} />
                   <span>Cancele quando quiser</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Check className="text-green-400" size={20} />
+                  <Check className="text-green-400" size={16} style={{ width: '16px', height: '16px' }} />
                   <span>Sem compromisso</span>
                 </div>
               </div>
             </div>
 
             {/* Cards de Benefícios */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 mb-8 sm:mb-12 lg:mb-16 px-3 sm:px-0">
               {beneficios.map((beneficio, index) => {
                 const Icon = beneficio.icon
                 return (
                   <div
                     key={index}
-                    className="bg-brand-royal/50 backdrop-blur-sm rounded-2xl p-6 border border-brand-aqua/20 hover:border-brand-aqua/50 transition-all hover:scale-105"
+                    className="bg-brand-royal/50 backdrop-blur-sm rounded-xl sm:rounded-2xl p-4 sm:p-5 lg:p-6 border border-brand-aqua/20 hover:border-brand-aqua/50 transition-all hover:scale-105"
                   >
-                    <div className="w-12 h-12 bg-brand-aqua/20 rounded-xl flex items-center justify-center mb-4">
-                      <Icon className="text-brand-aqua" size={24} />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-brand-aqua/20 rounded-lg sm:rounded-xl flex items-center justify-center mb-3 sm:mb-4">
+                      <Icon className="text-brand-aqua" size={20} style={{ width: '20px', height: '20px' }} />
                     </div>
-                    <h3 className="text-white font-semibold mb-2">{beneficio.titulo}</h3>
-                    <p className="text-brand-clean/70 text-sm leading-relaxed">{beneficio.descricao}</p>
+                    <h3 className="text-white font-semibold mb-2 text-sm sm:text-base">{beneficio.titulo}</h3>
+                    <p className="text-brand-clean/70 text-xs sm:text-sm leading-relaxed">{beneficio.descricao}</p>
                   </div>
                 )
               })}
             </div>
 
             {/* Planos */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-5xl mx-auto mb-16">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8 max-w-5xl mx-auto mb-8 sm:mb-12 lg:mb-16 px-3 sm:px-0">
               {planos.map((plano) => {
                 const Icon = plano.icon
                 return (
                   <div
                     key={plano.id}
-                    className={`bg-brand-royal/80 backdrop-blur-sm rounded-3xl p-8 border-2 transition-all hover:scale-105 ${
+                    className={`bg-brand-royal/80 backdrop-blur-sm rounded-2xl sm:rounded-3xl p-4 sm:p-6 lg:p-8 border-2 transition-all hover:scale-105 ${
                       plano.destacado
                         ? 'border-brand-aqua shadow-2xl shadow-brand-aqua/20'
                         : 'border-brand-aqua/30 hover:border-brand-aqua/50'
                     }`}
                   >
                     {plano.destacado && (
-                      <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brand-aqua rounded-full mb-4">
-                        <Star className="text-white fill-white" size={14} />
-                        <span className="text-white font-bold text-sm">MAIS POPULAR</span>
+                      <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1 sm:py-1.5 bg-brand-aqua rounded-full mb-3 sm:mb-4">
+                        <Star className="text-white fill-white" size={12} style={{ width: '12px', height: '12px' }} />
+                        <span className="text-white font-bold text-xs sm:text-sm">MAIS POPULAR</span>
                       </div>
                     )}
                     
-                    <div className="flex items-center gap-4 mb-6">
-                      <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${
+                    <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-5 lg:mb-6">
+                      <div className={`w-12 h-12 sm:w-14 sm:h-14 lg:w-16 lg:h-16 rounded-xl sm:rounded-2xl flex items-center justify-center flex-shrink-0 ${
                         plano.destacado ? 'bg-brand-aqua' : 'bg-brand-aqua/20'
                       }`}>
-                        <Icon size={32} className={plano.destacado ? 'text-white' : 'text-brand-aqua'} />
+                        <Icon size={24} className={plano.destacado ? 'text-white' : 'text-brand-aqua'} style={{ width: '24px', height: '24px' }} />
                       </div>
                       <div>
-                        <h3 className="text-2xl font-display font-bold text-white mb-1">{plano.nome}</h3>
-                        <p className="text-brand-clean/70 text-sm">{plano.descricao}</p>
+                        <h3 className="text-lg sm:text-xl lg:text-2xl font-display font-bold text-white mb-1">{plano.nome}</h3>
+                        <p className="text-brand-clean/70 text-xs sm:text-sm">{plano.descricao}</p>
                       </div>
                     </div>
 
-                    <div className="mb-6">
+                    <div className="mb-4 sm:mb-5 lg:mb-6">
                       <div className="flex items-baseline gap-2 mb-2">
-                        <span className="text-4xl font-bold text-white">{plano.preco}</span>
-                        <span className="text-brand-clean/60 text-sm">{plano.periodo}</span>
+                        <span className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white">{plano.preco}</span>
+                        <span className="text-brand-clean/60 text-xs sm:text-sm">{plano.periodo}</span>
                       </div>
                       {plano.testeGratis && (
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-green-500/20 rounded-lg mb-4">
-                          <span className="text-green-400 font-semibold text-sm">{plano.testeGratis}</span>
+                        <div className="inline-flex items-center gap-2 px-2.5 sm:px-3 py-1 bg-green-500/20 rounded-lg mb-3 sm:mb-4">
+                          <span className="text-green-400 font-semibold text-xs sm:text-sm">{plano.testeGratis}</span>
                         </div>
                       )}
                     </div>
 
-                    <ul className="space-y-3 mb-8">
+                    <ul className="space-y-2 sm:space-y-3 mb-6 sm:mb-7 lg:mb-8">
                       {plano.features.map((feature, index) => (
-                        <li key={index} className="flex items-start gap-3">
-                          <Check className="text-brand-aqua flex-shrink-0 mt-0.5" size={20} />
-                          <span className="text-brand-clean/90 text-sm">{feature}</span>
+                        <li key={index} className="flex items-start gap-2 sm:gap-3">
+                          <Check className="text-brand-aqua flex-shrink-0 mt-0.5" size={16} style={{ width: '16px', height: '16px' }} />
+                          <span className="text-brand-clean/90 text-xs sm:text-sm leading-relaxed">{feature}</span>
                         </li>
                       ))}
                     </ul>
@@ -347,7 +363,7 @@ export default function UpgradePage() {
                     <button
                       onClick={() => handleSelecionarPlano(plano.id)}
                       disabled={loadingCheckout === plano.id}
-                      className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
+                      className={`w-full py-3 sm:py-4 rounded-xl font-bold text-sm sm:text-base lg:text-lg transition-all ${
                         plano.destacado
                           ? 'bg-gradient-to-r from-brand-aqua to-blue-500 text-white hover:shadow-2xl hover:shadow-brand-aqua/50'
                           : 'bg-brand-aqua text-white hover:bg-brand-aqua/90'
@@ -355,13 +371,13 @@ export default function UpgradePage() {
                     >
                       {loadingCheckout === plano.id ? (
                         <>
-                          <Loader2 className="animate-spin" size={20} />
+                          <Loader2 className="animate-spin" size={18} style={{ width: '18px', height: '18px' }} />
                           <span>Processando...</span>
                         </>
                       ) : (
                         <>
                           <span>Assinar Agora</span>
-                          <ArrowRight size={20} />
+                          <ArrowRight size={18} style={{ width: '18px', height: '18px' }} />
                         </>
                       )}
                     </button>
@@ -371,11 +387,11 @@ export default function UpgradePage() {
             </div>
 
             {/* Depoimentos */}
-            <div className="mb-16">
-              <h2 className="text-3xl font-display font-bold text-white text-center mb-8">
+            <div className="mb-8 sm:mb-12 lg:mb-16 px-3 sm:px-0">
+              <h2 className="text-xl sm:text-2xl lg:text-3xl font-display font-bold text-white text-center mb-4 sm:mb-6 lg:mb-8">
                 Pessoas Reais. Resultados Reais.
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 lg:gap-6">
                 {depoimentos.map((depoimento, index) => (
                   <div
                     key={index}

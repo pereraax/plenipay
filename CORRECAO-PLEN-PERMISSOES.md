@@ -100,3 +100,5 @@ O PLEN AI estava permitindo que usuários sem email confirmado ou sem plano adeq
 
 **O PLEN AI agora identifica e bloqueia corretamente usuários sem email confirmado ou sem plano adequado!**
 
+
+

@@ -72,3 +72,5 @@ Animação especial no botão do PLEN para dar sensação de algo raro e precios
 
 **✅ Animação implementada com sucesso! O botão PLEN agora tem um visual único e especial!**
 
+
+

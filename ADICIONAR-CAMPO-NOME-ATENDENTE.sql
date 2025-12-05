@@ -33,3 +33,5 @@ WHERE table_name = 'chat_conversations'
 -- 3. Exibir "João Silva está te atendendo agora" no chat do cliente
 -- ============================================
 
+
+

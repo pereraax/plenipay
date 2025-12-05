@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Check, Copy, ArrowLeft, Loader2, QrCode, Smartphone } from 'lucide-react'
+import { Check, Copy, ArrowLeft, Loader2, QrCode, Smartphone, Clock, RefreshCw } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import MobileMenu from '@/components/MobileMenu'
 import { createNotification } from '@/components/NotificationBell'
@@ -15,8 +15,9 @@ export default function PagamentoPixPage() {
   const [pixCopyPaste, setPixCopyPaste] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
-  const [simulando, setSimulando] = useState(false)
   const [showModalBoasVindas, setShowModalBoasVindas] = useState(false)
+  const [timeRemaining, setTimeRemaining] = useState(300) // 5 minutos em segundos
+  const [isExpired, setIsExpired] = useState(false)
   const subscriptionId = searchParams.get('subscriptionId')
   const plano = searchParams.get('plano') as 'basico' | 'premium' | null
 
@@ -36,6 +37,9 @@ export default function PagamentoPixPage() {
       setPixQrCode(qrCode)
       setPixCopyPaste(copyPaste)
       setLoading(false)
+      // Iniciar cronômetro quando QR code for carregado
+      setTimeRemaining(300)
+      setIsExpired(false)
     } else if (subscriptionId) {
       // Se não tiver QR code mas tiver subscriptionId, buscar
       console.log('🔍 Buscando pagamento PIX via API...')
@@ -72,9 +76,17 @@ export default function PagamentoPixPage() {
       if (data.success) {
         if (data.pixQrCode) {
           setPixQrCode(data.pixQrCode)
+          // Iniciar cronômetro quando QR code for carregado
+          setTimeRemaining(300)
+          setIsExpired(false)
         }
         if (data.pixCopyPaste) {
           setPixCopyPaste(data.pixCopyPaste)
+          // Iniciar cronômetro quando código PIX for carregado
+          if (!data.pixQrCode) {
+            setTimeRemaining(300)
+            setIsExpired(false)
+          }
         }
         
         if (!data.pixQrCode && !data.pixCopyPaste) {
@@ -112,36 +124,44 @@ export default function PagamentoPixPage() {
     }
   }
 
-  const simularPagamento = async () => {
-    if (!subscriptionId) {
-      createNotification('Erro: ID da assinatura não encontrado', 'warning')
-      return
-    }
+  // Cronômetro de expiração
+  useEffect(() => {
+    if (!pixQrCode && !pixCopyPaste) return
+    if (isExpired) return
 
-    setSimulando(true)
-    try {
-      const response = await fetch('/api/pagamento/simular-aprovacao', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscriptionId }),
+    const interval = setInterval(() => {
+      setTimeRemaining((prev) => {
+        if (prev <= 1) {
+          setIsExpired(true)
+          createNotification('QR Code expirado! Gere um novo código.', 'warning')
+          return 0
+        }
+        return prev - 1
       })
+    }, 1000)
 
-      const data = await response.json()
+    return () => clearInterval(interval)
+  }, [pixQrCode, pixCopyPaste, isExpired])
 
-      if (response.ok) {
-        // Mostrar modal de boas-vindas
-        setShowModalBoasVindas(true)
-        setSimulando(false)
-      } else {
-        createNotification('Erro: ' + (data.error || 'Erro ao simular pagamento'), 'warning')
-        setSimulando(false)
-      }
-    } catch (error: any) {
-      console.error('Erro ao simular pagamento:', error)
-      createNotification('Erro ao simular pagamento: ' + error.message, 'warning')
-      setSimulando(false)
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  }
+
+  const gerarNovoQRCode = () => {
+    if (subscriptionId) {
+      setPixQrCode(null)
+      setPixCopyPaste(null)
+      setTimeRemaining(300)
+      setIsExpired(false)
+      buscarPagamentoPix()
+    } else {
+      createNotification('Erro: ID da assinatura não encontrado', 'warning')
+      router.push('/upgrade')
     }
   }
+
 
   if (loading) {
     return (
@@ -186,14 +206,53 @@ export default function PagamentoPixPage() {
               </p>
             </div>
 
+            {/* Cronômetro de Expiração */}
+            {(pixQrCode || pixCopyPaste) && !isExpired && (
+              <div className="mb-4 flex items-center justify-center gap-2 bg-brand-aqua/10 rounded-xl px-4 py-2 border border-brand-aqua/20">
+                <Clock size={18} className="text-brand-aqua" />
+                <span className="text-white text-sm font-medium">
+                  QR Code expira em: <span className="text-brand-aqua font-bold">{formatTime(timeRemaining)}</span>
+                </span>
+              </div>
+            )}
+
+            {/* Aviso de Expiração */}
+            {isExpired && (
+              <div className="mb-4 bg-red-500/20 border-2 border-red-500 rounded-xl p-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-2">
+                    <Clock size={20} className="text-red-400" />
+                    <p className="text-red-200 text-sm font-medium">
+                      QR Code expirado! Gere um novo código para continuar.
+                    </p>
+                  </div>
+                  <button
+                    onClick={gerarNovoQRCode}
+                    className="flex items-center gap-2 px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-colors text-sm font-semibold whitespace-nowrap"
+                  >
+                    <RefreshCw size={16} />
+                    <span>Gerar Novo</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             {/* QR Code */}
-            {pixQrCode ? (
+            {pixQrCode && !isExpired ? (
               <div className="bg-white rounded-2xl p-6 mb-6 flex items-center justify-center">
                 <img
                   src={`data:image/png;base64,${pixQrCode}`}
                   alt="QR Code PIX"
-                  className="w-64 h-64"
+                  className="w-full max-w-xs h-auto"
                 />
+              </div>
+            ) : pixQrCode && isExpired ? (
+              <div className="bg-white/10 rounded-2xl p-12 mb-6 flex items-center justify-center border-2 border-red-500/50">
+                <div className="text-center">
+                  <Clock className="text-red-400 mx-auto mb-4" size={48} />
+                  <p className="text-red-200 font-semibold mb-2">QR Code Expirado</p>
+                  <p className="text-brand-clean/70 text-sm">Gere um novo código para continuar</p>
+                </div>
               </div>
             ) : (
               <div className="bg-white/10 rounded-2xl p-12 mb-6 flex items-center justify-center">
@@ -205,21 +264,21 @@ export default function PagamentoPixPage() {
             )}
 
             {/* Código PIX Copy Paste */}
-            {pixCopyPaste && (
+            {pixCopyPaste && !isExpired && (
               <div className="mb-6">
                 <label className="block text-sm font-medium text-white mb-2">
                   Ou copie o código PIX:
                 </label>
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <input
                     type="text"
                     value={pixCopyPaste}
                     readOnly
-                    className="flex-1 px-4 py-3 bg-white/10 border border-brand-aqua/30 rounded-xl text-white text-sm font-mono focus:outline-none focus:border-brand-aqua"
+                    className="flex-1 px-4 py-3 bg-white/10 border border-brand-aqua/30 rounded-xl text-white text-sm font-mono focus:outline-none focus:border-brand-aqua break-all"
                   />
                   <button
                     onClick={copiarCodigo}
-                    className={`px-6 py-3 rounded-xl font-semibold transition-smooth flex items-center gap-2 ${
+                    className={`px-4 sm:px-6 py-3 rounded-xl font-semibold transition-smooth flex items-center justify-center gap-2 whitespace-nowrap ${
                       copied
                         ? 'bg-green-500 text-white'
                         : 'bg-brand-aqua text-white hover:bg-brand-aqua/90'
@@ -228,7 +287,8 @@ export default function PagamentoPixPage() {
                     {copied ? (
                       <>
                         <Check size={20} />
-                        <span>Copiado!</span>
+                        <span className="hidden sm:inline">Copiado!</span>
+                        <span className="sm:hidden">Copiado!</span>
                       </>
                     ) : (
                       <>
@@ -236,6 +296,32 @@ export default function PagamentoPixPage() {
                         <span>Copiar</span>
                       </>
                     )}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Código PIX Expirado */}
+            {pixCopyPaste && isExpired && (
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-white mb-2">
+                  Código PIX (expirado):
+                </label>
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={pixCopyPaste}
+                    readOnly
+                    disabled
+                    className="flex-1 px-4 py-3 bg-white/5 border border-red-500/30 rounded-xl text-white/50 text-sm font-mono focus:outline-none break-all"
+                  />
+                  <button
+                    onClick={gerarNovoQRCode}
+                    className="px-4 sm:px-6 py-3 rounded-xl font-semibold transition-smooth flex items-center justify-center gap-2 whitespace-nowrap bg-brand-aqua text-white hover:bg-brand-aqua/90"
+                  >
+                    <RefreshCw size={20} />
+                    <span className="hidden sm:inline">Gerar Novo</span>
+                    <span className="sm:hidden">Novo</span>
                   </button>
                 </div>
               </div>
@@ -276,37 +362,6 @@ export default function PagamentoPixPage() {
                 <p className="text-brand-clean/60 text-xs">
                   Após o pagamento, você receberá um email de confirmação
                 </p>
-              </div>
-            )}
-
-            {/* Botão de Simulação (apenas em desenvolvimento) */}
-            {typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') && (
-              <div className="mt-6 pt-6 border-t border-brand-aqua/20">
-                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl p-4 mb-4">
-                  <p className="text-yellow-400 text-xs font-medium mb-2">
-                    🧪 Modo Desenvolvimento
-                  </p>
-                  <p className="text-brand-clean/60 text-xs">
-                    Use este botão para simular a aprovação do pagamento e testar o fluxo completo
-                  </p>
-                </div>
-                <button
-                  onClick={simularPagamento}
-                  disabled={simulando || !subscriptionId}
-                  className="w-full px-6 py-3 bg-yellow-500 hover:bg-yellow-600 disabled:bg-yellow-500/50 disabled:cursor-not-allowed text-white rounded-xl font-semibold transition-smooth flex items-center justify-center gap-2 shadow-lg hover:shadow-xl"
-                >
-                  {simulando ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      <span>Processando...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Check size={20} />
-                      <span>Já Paguei - Simular Aprovação</span>
-                    </>
-                  )}
-                </button>
               </div>
             )}
           </div>

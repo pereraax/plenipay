@@ -38,3 +38,5 @@ Se você criar o bucket `uploads`, você pode voltar a usar o código original q
 
 O código foi ajustado para usar o bucket `emprestimos` que já existe. Se você preferir manter tudo no mesmo bucket, não precisa criar o `uploads`.
 
+
+

@@ -6,9 +6,11 @@ import { CheckCircle } from 'lucide-react'
 interface ModalLoginConcluidoProps {
   isOpen: boolean
   onClose: () => void
+  mensagem?: string
+  titulo?: string
 }
 
-export default function ModalLoginConcluido({ isOpen, onClose }: ModalLoginConcluidoProps) {
+export default function ModalLoginConcluido({ isOpen, onClose, mensagem, titulo = 'Login Concluído!' }: ModalLoginConcluidoProps) {
   const [show, setShow] = useState(false)
 
   useEffect(() => {
@@ -57,12 +59,12 @@ export default function ModalLoginConcluido({ isOpen, onClose }: ModalLoginConcl
 
           {/* Título */}
           <h2 className="text-2xl font-display font-bold text-white mb-2">
-            Login Concluído!
+            {titulo}
           </h2>
 
           {/* Mensagem */}
           <p className="text-white/90 text-sm leading-relaxed">
-            Sua conta foi criada com sucesso. Você será redirecionado em instantes...
+            {mensagem || 'Você será redirecionado em instantes...'}
           </p>
         </div>
 
@@ -93,4 +95,6 @@ export default function ModalLoginConcluido({ isOpen, onClose }: ModalLoginConcl
     </div>
   )
 }
+
+
 

@@ -158,3 +158,5 @@ Em vez de:
 
 **⚠️ IMPORTANTE:** Execute o SQL no Supabase antes de testar!
 
+
+

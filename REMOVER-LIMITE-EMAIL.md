@@ -93,3 +93,5 @@ Para **produção**: Use a **OPÇÃO 2** (SMTP próprio) - mais profissional e s
 O código já está preparado para funcionar com ou sem confirmação de email. 
 Se você desabilitar a confirmação, os usuários poderão fazer login imediatamente após criar a conta.
 
+
+

@@ -87,3 +87,5 @@ As rotas de API (`/api/admin/*`) **NÃO foram alteradas** e continuam funcionand
 
 **✅ Alteração concluída! O painel admin agora está em `/administracaosecr`**
 
+
+

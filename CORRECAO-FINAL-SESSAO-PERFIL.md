@@ -121,3 +121,5 @@ Sem a Service Role Key, a API não consegue confirmar emails automaticamente.
 
 **Tudo funciona perfeitamente mesmo sem confirmar o email!**
 
+
+

@@ -2,7 +2,36 @@
 // Utilitários para integração com Asaas
 
 const ASAAS_API_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3'
-const ASAAS_API_KEY = process.env.ASAAS_API_KEY!
+
+// IMPORTANTE: Next.js pode não carregar variáveis que começam com $ do .env.local
+// Vamos tentar ler diretamente do arquivo como fallback
+function getAsaasApiKey(): string {
+  let apiKey = process.env.ASAAS_API_KEY
+
+  if (!apiKey) {
+    try {
+      const fs = require('fs')
+      const path = require('path')
+      const envPath = path.join(process.cwd(), '.env.local')
+      const envContent = fs.readFileSync(envPath, 'utf8')
+      const match = envContent.match(/^ASAAS_API_KEY=(.+)$/m)
+      if (match) {
+        apiKey = match[1].trim()
+        console.log('✅ [lib/asaas] API Key carregada diretamente do arquivo .env.local')
+      }
+    } catch (fileError: any) {
+      console.error('❌ [lib/asaas] Erro ao ler .env.local:', fileError.message)
+    }
+  }
+
+  if (!apiKey) {
+    throw new Error('ASAAS_API_KEY não está configurada. Verifique o arquivo .env.local')
+  }
+
+  return apiKey
+}
+
+const ASAAS_API_KEY = getAsaasApiKey()
 
 export interface AsaasCustomer {
   name: string
@@ -37,6 +66,16 @@ export interface AsaasResponse {
  * Criar um customer no Asaas
  */
 export async function criarCustomerAsaas(customer: AsaasCustomer): Promise<AsaasResponse> {
+  console.log('📝 [lib/asaas] Criando customer no Asaas:', {
+    name: customer.name,
+    email: customer.email,
+    hasCpf: !!customer.cpfCnpj,
+    cpfLength: customer.cpfCnpj?.length || 0,
+    apiUrl: ASAAS_API_URL,
+    apiKeyLength: ASAAS_API_KEY.length,
+    apiKeyPrefix: ASAAS_API_KEY.substring(0, 20) + '...',
+  })
+  
   const response = await fetch(`${ASAAS_API_URL}/customers`, {
     method: 'POST',
     headers: {
@@ -45,13 +84,45 @@ export async function criarCustomerAsaas(customer: AsaasCustomer): Promise<Asaas
     },
     body: JSON.stringify(customer),
   })
+  
+  console.log('📡 [lib/asaas] Resposta do Asaas:', {
+    status: response.status,
+    ok: response.ok,
+    statusText: response.statusText,
+    headers: Object.fromEntries(response.headers.entries()),
+  })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.errors?.[0]?.description || error.message || 'Erro ao criar customer')
+    // Tentar ler a resposta como texto primeiro
+    const errorText = await response.text()
+    let error: any = {}
+    
+    try {
+      error = JSON.parse(errorText)
+    } catch (parseError) {
+      // Se não conseguir parsear, usar o texto como erro
+      console.error('❌ Erro ao parsear resposta do Asaas:', errorText)
+      throw new Error(`Erro ao criar customer: ${response.status} ${response.statusText}. Resposta: ${errorText.substring(0, 200)}`)
+    }
+    
+    throw new Error(error.errors?.[0]?.description || error.message || `Erro ao criar customer: ${response.status} ${response.statusText}`)
   }
 
-  return response.json()
+  // Verificar se a resposta tem conteúdo antes de tentar parsear
+  const responseText = await response.text()
+  
+  if (!responseText || responseText.trim() === '') {
+    console.error('❌ Resposta vazia do Asaas ao criar customer')
+    throw new Error('Resposta vazia do Asaas ao criar customer')
+  }
+  
+  try {
+    return JSON.parse(responseText)
+  } catch (parseError: any) {
+    console.error('❌ Erro ao parsear resposta JSON do Asaas:', parseError)
+    console.error('❌ Resposta recebida:', responseText.substring(0, 500))
+    throw new Error(`Erro ao processar resposta do Asaas: ${parseError.message}`)
+  }
 }
 
 /**
@@ -68,11 +139,35 @@ export async function criarAssinaturaAsaas(subscription: AsaasSubscription): Pro
   })
 
   if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.errors?.[0]?.description || error.message || 'Erro ao criar assinatura')
+    // Tentar ler a resposta como texto primeiro
+    const errorText = await response.text()
+    let error: any = {}
+    
+    try {
+      error = JSON.parse(errorText)
+    } catch (parseError) {
+      console.error('❌ Erro ao parsear resposta do Asaas:', errorText)
+      throw new Error(`Erro ao criar assinatura: ${response.status} ${response.statusText}. Resposta: ${errorText.substring(0, 200)}`)
+    }
+    
+    throw new Error(error.errors?.[0]?.description || error.message || `Erro ao criar assinatura: ${response.status} ${response.statusText}`)
   }
 
-  return response.json()
+  // Verificar se a resposta tem conteúdo antes de tentar parsear
+  const responseText = await response.text()
+  
+  if (!responseText || responseText.trim() === '') {
+    console.error('❌ Resposta vazia do Asaas ao criar assinatura')
+    throw new Error('Resposta vazia do Asaas ao criar assinatura')
+  }
+  
+  try {
+    return JSON.parse(responseText)
+  } catch (parseError: any) {
+    console.error('❌ Erro ao parsear resposta JSON do Asaas:', parseError)
+    console.error('❌ Resposta recebida:', responseText.substring(0, 500))
+    throw new Error(`Erro ao processar resposta do Asaas: ${parseError.message}`)
+  }
 }
 
 /**

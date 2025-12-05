@@ -30,3 +30,5 @@ export function gerarNomeBrasileiro(): string {
   return `${nome} ${sobrenome}`
 }
 
+
+

@@ -54,6 +54,46 @@ export default function CadastroPage() {
     return value
   }
 
+  // Função para validar senha
+  const validarSenha = (senha: string): string[] => {
+    const errors: string[] = []
+    
+    if (senha.length < 8) {
+      errors.push('pelo menos 8 caracteres')
+    }
+    if (!/[A-Z]/.test(senha)) {
+      errors.push('uma letra maiúscula')
+    }
+    if (!/[a-z]/.test(senha)) {
+      errors.push('uma letra minúscula')
+    }
+    if (!/[0-9]/.test(senha)) {
+      errors.push('um número')
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(senha)) {
+      errors.push('um caractere especial (!@#$%...)')
+    }
+    
+    return errors
+  }
+
+  // Verificar requisitos da senha em tempo real
+  const requisitosSenha = {
+    minimo: formData.senha.length >= 8,
+    maiuscula: /[A-Z]/.test(formData.senha),
+    minuscula: /[a-z]/.test(formData.senha),
+    numero: /[0-9]/.test(formData.senha),
+    especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(formData.senha),
+  }
+  
+  const senhaValida = Object.values(requisitosSenha).every(Boolean)
+  
+  // Verificar se as senhas coincidem (em tempo real)
+  const temSenha = formData.senha.length > 0
+  const temConfirmacao = formData.confirmarSenha.length > 0
+  const senhasNaoCoincidem = temSenha && temConfirmacao && formData.senha !== formData.confirmarSenha
+  const senhasCoincidem = temSenha && temConfirmacao && formData.senha === formData.confirmarSenha
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -78,9 +118,11 @@ export default function CadastroPage() {
       return
     }
 
-    if (formData.senha.length < 6) {
-      console.log('Validação falhou: senha muito curta')
-      createNotification('A senha deve ter pelo menos 6 caracteres', 'warning')
+    // Validação de senha mais robusta
+    const senhaErrors = validarSenha(formData.senha)
+    if (senhaErrors.length > 0) {
+      console.log('Validação falhou:', senhaErrors.join(', '))
+      createNotification('A senha não atende aos requisitos. Verifique as regras abaixo.', 'warning')
       setLoading(false)
       return
     }
@@ -151,57 +193,26 @@ export default function CadastroPage() {
         console.log('📧 Email cadastrado:', formData.email)
         console.log('📧 Email confirmado?', result?.emailConfirmado)
         
-        // IMPORTANTE: NÃO confirmar email automaticamente!
-        // O usuário deve escolher se quer verificar agora ou depois
-        // Se escolher "verificar depois", o email permanece NÃO confirmado
+        // Email foi enviado automaticamente pelo Supabase
+        // Mostrar modal pedindo para verificar email
+        console.log('📧 Email de confirmação foi enviado automaticamente')
+        console.log('🔒 Usuário precisa verificar email antes de fazer login')
         
-        console.log('⚠️ Conta criada - Email NÃO será confirmado automaticamente')
-        console.log('📧 O usuário deve confirmar o email quando quiser')
+        setLoading(false)
         
-        // CRÍTICO: Limpar qualquer sessão antiga ANTES de criar nova sessão
-        // Isso garante que não há dados de outro usuário sendo exibidos
-        console.log('🧹 Limpando sessões antigas para garantir isolamento de dados...')
-        const supabase = createClient()
-        
-        // Fazer logout para limpar sessão antiga
-        await supabase.auth.signOut()
-        
-        // Limpar localStorage/cache que possa ter dados antigos
-        if (typeof window !== 'undefined') {
-          // Limpar apenas itens relacionados a sessão/dados do usuário
-          const keysToRemove: string[] = []
-          for (let i = 0; i < localStorage.length; i++) {
-            const key = localStorage.key(i)
-            if (key && (key.includes('supabase') || key.includes('auth') || key.includes('session'))) {
-              keysToRemove.push(key)
-            }
-          }
-          keysToRemove.forEach(key => localStorage.removeItem(key))
-          console.log('✅ Cache limpo:', keysToRemove.length, 'itens removidos')
-        }
-        
-        // Aguardar para garantir que o logout foi processado
-        await new Promise(resolve => setTimeout(resolve, 800))
-        
-        console.log('✅ Sessões antigas limpas - preparando para criar nova sessão')
-        
-        // SEMPRE mostrar modal de confirmação de email após criar conta
-        // O usuário pode escolher verificar agora ou depois
-        console.log('🔔 Preparando para mostrar modal de confirmação...')
-        console.log('📧 Email do formulário:', formData.email)
-        
-        // Garantir que emailCadastrado está definido ANTES de mostrar modal
+        // Garantir que email está definido ANTES de mostrar modal
+        console.log('📧 Definindo emailCadastrado:', formData.email)
         setEmailCadastrado(formData.email)
         
-        // Usar setTimeout para garantir que o estado foi atualizado
+        // Aguardar um pouco para garantir que o estado foi atualizado
         setTimeout(() => {
-          console.log('🔔 Definindo showModalConfirmacao para true')
+          console.log('🔔 Mostrando modal de confirmação de email...')
+          console.log('📧 Email cadastrado definido:', formData.email)
           setShowModalConfirmacao(true)
           console.log('✅ Modal deve estar visível agora')
         }, 100)
         
-        createNotification('Conta criada! Verifique seu email para confirmar sua conta.', 'success')
-        setLoading(false)
+        createNotification('Conta criada! Verifique seu email para confirmar.', 'success')
       } else {
         console.error('❌ Resultado inesperado do signUp:', result)
         createNotification('Erro ao criar conta. Tente novamente.', 'warning')
@@ -290,8 +301,14 @@ export default function CadastroPage() {
                   required
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:ring-2 focus:ring-brand-aqua focus:border-brand-aqua transition-smooth pr-12"
-                  placeholder="Mínimo 6 caracteres"
+                  className={`w-full px-4 py-3 bg-brand-midnight/50 border rounded-xl text-brand-white placeholder-brand-clean/40 focus:ring-2 focus:ring-brand-aqua transition-smooth pr-12 ${
+                    formData.senha && !senhaValida
+                      ? 'border-red-500/50 focus:border-red-500'
+                      : formData.senha && senhaValida
+                      ? 'border-green-500/50 focus:border-green-500'
+                      : 'border-brand-aqua/20 focus:border-brand-aqua'
+                  }`}
+                  placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
@@ -300,6 +317,33 @@ export default function CadastroPage() {
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
+              </div>
+              
+              {/* Lista de requisitos da senha */}
+              <div className="mt-2 p-3 bg-brand-midnight/30 rounded-lg border border-white/10">
+                <p className="text-xs font-semibold text-brand-clean mb-2">Requisitos da senha:</p>
+                <ul className="space-y-1 text-xs">
+                  <li className={`flex items-center gap-2 ${requisitosSenha.minimo ? 'text-green-400' : 'text-brand-clean/60'}`}>
+                    <span>{requisitosSenha.minimo ? '✓' : '○'}</span>
+                    <span>Pelo menos 8 caracteres</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${requisitosSenha.maiuscula ? 'text-green-400' : 'text-brand-clean/60'}`}>
+                    <span>{requisitosSenha.maiuscula ? '✓' : '○'}</span>
+                    <span>Uma letra maiúscula (A-Z)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${requisitosSenha.minuscula ? 'text-green-400' : 'text-brand-clean/60'}`}>
+                    <span>{requisitosSenha.minuscula ? '✓' : '○'}</span>
+                    <span>Uma letra minúscula (a-z)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${requisitosSenha.numero ? 'text-green-400' : 'text-brand-clean/60'}`}>
+                    <span>{requisitosSenha.numero ? '✓' : '○'}</span>
+                    <span>Um número (0-9)</span>
+                  </li>
+                  <li className={`flex items-center gap-2 ${requisitosSenha.especial ? 'text-green-400' : 'text-brand-clean/60'}`}>
+                    <span>{requisitosSenha.especial ? '✓' : '○'}</span>
+                    <span>Um caractere especial (!@#$%...)</span>
+                  </li>
+                </ul>
               </div>
             </div>
 
@@ -312,9 +356,35 @@ export default function CadastroPage() {
                 required
                 value={formData.confirmarSenha}
                 onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                className={`w-full px-4 py-3 bg-brand-midnight/50 border-2 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none transition-smooth ${
+                  senhasNaoCoincidem
+                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50 ring-2 ring-red-500/30'
+                    : senhasCoincidem
+                    ? 'border-green-500 focus:border-green-500 focus:ring-green-500/50 ring-2 ring-green-500/30'
+                    : 'border-brand-aqua/20 focus:border-brand-aqua'
+                }`}
                 placeholder="Confirme sua senha"
               />
+              {senhasNaoCoincidem && (
+                <div className="mt-3 p-4 bg-red-600/30 border-2 border-red-500 rounded-lg shadow-lg">
+                  <p className="text-base text-red-200 flex items-start gap-3 font-bold">
+                    <span className="text-xl flex-shrink-0">⚠️</span>
+                    <span className="flex-1">
+                      <strong>As senhas não coincidem!</strong>
+                      <br />
+                      <span className="text-sm font-normal opacity-90">Verifique se você digitou a mesma senha nos dois campos.</span>
+                    </span>
+                  </p>
+                </div>
+              )}
+              {senhasCoincidem && (
+                <div className="mt-3 p-3 bg-green-500/20 border-2 border-green-500/50 rounded-lg">
+                  <p className="text-sm text-green-300 flex items-center gap-2 font-semibold">
+                    <span className="text-lg">✓</span>
+                    <span>Senhas coincidem</span>
+                  </p>
+                </div>
+              )}
             </div>
 
             <div>
@@ -364,89 +434,29 @@ export default function CadastroPage() {
         </div>
       </div>
 
-      {/* Modal de Confirmação de Email - SEMPRE APARECE APÓS CRIAR CONTA */}
+      {/* Modal de Confirmação de Email - REMOVIDO: não aparece mais após cadastro */}
+      {/* O modal só aparece quando o usuário clica "Verificar agora" no perfil */}
+      {/* Modal de Confirmação de Email - Aparece após criar conta */}
       {showModalConfirmacao && (emailCadastrado || formData.email) && (
         <ModalConfirmarEmail
           email={emailCadastrado || formData.email}
           obrigatorio={false}
+          emailJaEnviado={true}
           onConfirmado={() => {
-            console.log('✅ Email confirmado, mostrando popup de login concluído...')
+            console.log('✅ Email confirmado via callback - redirecionando para home...')
             setShowModalConfirmacao(false)
-            // Mostrar popup de login concluído
-            setShowModalLoginConcluido(true)
+            // Redirecionar para home quando email for confirmado (após clicar no link)
+            router.push('/home?emailConfirmed=true')
           }}
-          onClose={async () => {
-            console.log('⏭️ Usuário escolheu verificar depois - criando sessão temporária sem confirmar email')
+          onClose={() => {
+            // Permitir fechar o modal - usuário pode verificar depois
+            console.log('⚠️ Modal fechado - usuário pode verificar email depois')
             setShowModalConfirmacao(false)
-            
-            // Criar sessão temporária SEM confirmar email
-            // Isso permite que o usuário acesse a plataforma, mas email permanece não confirmado
-            try {
-              const sessionResponse = await fetch('/api/auth/permitir-login-sem-confirmacao', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: formData.email,
-                  password: formData.senha,
-                }),
-              })
-
-              const sessionData = await sessionResponse.json()
-
-              if (sessionResponse.ok && sessionData.session) {
-                console.log('✅ Sessão temporária criada (email não confirmado)')
-                
-                const supabase = createClient()
-                // Salvar sessão no cliente
-                const { error: sessionError } = await supabase.auth.setSession({
-                  access_token: sessionData.session.access_token,
-                  refresh_token: sessionData.session.refresh_token,
-                })
-
-                if (sessionError) {
-                  console.error('❌ Erro ao salvar sessão:', sessionError)
-                  createNotification('Erro ao criar sessão. Redirecionando para login...', 'warning')
-                  await new Promise(resolve => setTimeout(resolve, 1000))
-                  window.location.href = '/login'
-                  return
-                }
-
-                console.log('✅ Sessão salva - mostrando popup de login concluído...')
-                console.log('👤 ID do usuário na sessão:', sessionData.user?.id)
-                console.log('📧 Email do usuário:', sessionData.user?.email)
-                
-                // CRÍTICO: Após salvar a sessão, fazer refresh do usuário para buscar dados atualizados
-                // Isso garante que o email_confirmed_at seja null (já que foi desconfirmado)
-                await supabase.auth.refreshSession()
-                
-                // Verificar novamente o usuário após refresh
-                const { data: { user: userAfterRefresh } } = await supabase.auth.getUser()
-                if (userAfterRefresh) {
-                  console.log('✅ Usuário após refresh:', {
-                    id: userAfterRefresh.id,
-                    email: userAfterRefresh.email,
-                    email_confirmed_at: userAfterRefresh.email_confirmed_at,
-                    status: userAfterRefresh.email_confirmed_at ? 'AINDA CONFIRMADO (problema!)' : 'DESCONFIRMADO (correto)'
-                  })
-                }
-                
-                // Mostrar popup de login concluído
-                setShowModalLoginConcluido(true)
-              } else {
-                console.error('⚠️ Erro ao criar sessão temporária:', sessionData.error)
-                // Se falhar, redirecionar para login
-                createNotification('Conta criada! Faça login para acessar.', 'success')
-                await new Promise(resolve => setTimeout(resolve, 1000))
-                window.location.href = '/login'
-              }
-            } catch (error) {
-              console.error('❌ Erro ao criar sessão temporária:', error)
-              createNotification('Conta criada! Faça login para acessar.', 'success')
-              await new Promise(resolve => setTimeout(resolve, 1000))
-              window.location.href = '/login'
-            }
+            // Redirecionar para login informando que precisa verificar email
+            createNotification('Conta criada! Verifique seu email para confirmar antes de fazer login.', 'info')
+            setTimeout(() => {
+              router.push('/login?mensagem=Verifique seu email para confirmar a conta antes de fazer login.')
+            }, 1000)
           }}
         />
       )}

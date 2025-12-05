@@ -55,3 +55,5 @@ USING (auth.role() = 'authenticated');
 -- Execute esta query para verificar se as políticas foram criadas:
 -- SELECT * FROM pg_policies WHERE tablename = 'banners' AND schemaname = 'public';
 
+
+

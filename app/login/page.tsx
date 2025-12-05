@@ -1,23 +1,37 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createNotification } from '@/components/NotificationBell'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import AnimatedBackground from '@/components/AnimatedBackground'
+import ModalEmailConfirmadoSucesso from '@/components/ModalEmailConfirmadoSucesso'
+import ModalLoginConcluido from '@/components/ModalLoginConcluido'
 
 export default function LoginPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [showModalLoginConcluido, setShowModalLoginConcluido] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     senha: '',
   })
+
+  // Mostrar mensagem da URL se existir (vindo do cadastro)
+  useEffect(() => {
+    const mensagem = searchParams.get('mensagem')
+    if (mensagem) {
+      createNotification(mensagem, 'info')
+      // Remover parâmetro da URL para não mostrar novamente
+      router.replace('/login')
+    }
+  }, [searchParams, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -68,75 +82,17 @@ export default function LoginPage() {
         
         console.log('🔍 Verificando erro - Message:', errorMessage, 'Status:', errorStatus, 'Code:', errorCode)
         
-        // IMPORTANTE: Se email não estiver confirmado, permitir login mesmo assim usando Admin API
+        // IMPORTANTE: Se email não estiver confirmado, BLOQUEAR login
         if (errorMessage.includes('email not confirmed') || 
             errorMessage.includes('email_not_confirmed') ||
             errorCode === 'email_not_confirmed') {
-          // O Supabase está bloqueando login porque email não foi confirmado
-          // Usar API que permite login SEM confirmar email
-          console.log('⚠️ Erro: Email não confirmado - Criando sessão temporária sem confirmar...')
-          
-          try {
-            // Chamar API que permite login sem confirmar email
-            const sessionResponse = await fetch('/api/auth/permitir-login-sem-confirmacao', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: formData.email,
-                password: formData.senha,
-              }),
-            })
-
-            const sessionData = await sessionResponse.json()
-
-            if (sessionResponse.ok && sessionData.session) {
-              console.log('✅ Login permitido sem confirmar email - sessão temporária criada')
-              
-              // Salvar sessão no cliente
-              const { error: sessionError } = await supabase.auth.setSession({
-                access_token: sessionData.session.access_token,
-                refresh_token: sessionData.session.refresh_token,
-              })
-
-              if (sessionError) {
-                console.error('❌ Erro ao salvar sessão:', sessionError)
-                mensagemErro = 'Erro ao salvar sessão. Tente novamente.'
-                setErrorMessage(mensagemErro)
-                createNotification(mensagemErro, 'warning')
-                setLoading(false)
-                return
-              }
-
-              // Aguardar um pouco para garantir que a sessão foi salva
-              await new Promise(resolve => setTimeout(resolve, 500))
-
-              createNotification('Login realizado! Confirme seu email nas configurações para acessar todas as funcionalidades.', 'success')
-              
-              // Aguardar mais um pouco antes de redirecionar
-              await new Promise(resolve => setTimeout(resolve, 1000))
-              
-              // Redirecionar
-              window.location.href = '/home'
-              return
-            } else {
-              // Se a API falhou, mostrar mensagem explicativa
-              console.error('❌ Erro na API de login sem confirmação:', sessionData.error)
-              mensagemErro = sessionData.error || 'Não foi possível fazer login. Verifique se o Service Role Key está configurado ou confirme seu email primeiro.'
-              setErrorMessage(mensagemErro)
-              createNotification(mensagemErro, 'warning')
-              setLoading(false)
-              return
-            }
-          } catch (apiError: any) {
-            console.error('❌ Erro ao chamar API de login sem confirmação:', apiError)
-            mensagemErro = 'Erro ao processar login. Tente novamente.'
-            setErrorMessage(mensagemErro)
-            createNotification(mensagemErro, 'warning')
-            setLoading(false)
-            return
-          }
+          // Email não foi confirmado - BLOQUEAR login
+          console.log('🔒 Email não confirmado - Login bloqueado')
+          mensagemErro = 'Por favor, confirme seu email antes de fazer login. Verifique sua caixa de entrada (incluindo spam).'
+          setErrorMessage(mensagemErro)
+          createNotification(mensagemErro, 'warning')
+          setLoading(false)
+          return
         } else if (errorMessage.includes('invalid login credentials') || 
             errorMessage.includes('invalid_credentials') ||
             errorMessage.includes('invalid email or password') ||
@@ -190,10 +146,13 @@ export default function LoginPage() {
         return
       }
 
-      // Não bloquear login se email não foi confirmado
-      // Usuário pode entrar, mas será lembrado de verificar nas configurações
-      if (!data.user.email_confirmed_at) {
-        console.warn('Email não confirmado ainda - permitindo login mas lembrando de verificar')
+      // Verificar se email foi confirmado
+      console.log('📧 Email confirmado?', !!data.user.email_confirmed_at)
+      
+      // Se veio do callback de confirmação, garantir que o estado está atualizado
+      const emailConfirmed = searchParams.get('emailConfirmed')
+      if (emailConfirmed === 'true') {
+        console.log('✅ Login após confirmação de email - estado deve estar atualizado')
       }
 
       console.log('✅ Login bem-sucedido!')
@@ -263,14 +222,9 @@ export default function LoginPage() {
         console.log('✅ Sessão verificada! Usuário:', verifiedUser.id)
       }
 
-      createNotification('Login realizado com sucesso!', 'success')
-      
-      // Aguardar mais um pouco para garantir que tudo foi processado
-      await new Promise(resolve => setTimeout(resolve, 1000))
-      
-      // Redirecionar - usar window.location.href para forçar reload completo
-      console.log('🚀 Redirecionando para /home...')
-      window.location.href = '/home'
+      // Mostrar popup de login concluído
+      console.log('✅ Login bem-sucedido - mostrando popup...')
+      setShowModalLoginConcluido(true)
       
     } catch (error: any) {
       console.error('❌ Erro inesperado:', error)
@@ -293,9 +247,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <AnimatedBackground />
-      <div className="w-full max-w-md relative z-10">
+      <div className="w-full max-w-md relative z-10" style={{ position: 'relative', zIndex: 10 }}>
         <Link
           href="/"
           className="inline-flex items-center gap-2 text-brand-clean/70 hover:text-brand-aqua transition-smooth mb-6"
@@ -393,6 +347,21 @@ export default function LoginPage() {
           </form>
         </div>
       </div>
+      
+      {/* Popup de sucesso quando email foi confirmado via link */}
+      <ModalEmailConfirmadoSucesso />
+      
+      {/* Popup de sucesso quando login for concluído */}
+      <ModalLoginConcluido
+        isOpen={showModalLoginConcluido}
+        onClose={() => {
+          setShowModalLoginConcluido(false)
+          // Redirecionar para home após fechar o popup
+          window.location.href = '/home'
+        }}
+        titulo="Autenticado com Sucesso!"
+        mensagem="Login realizado com sucesso! Você será redirecionado em instantes..."
+      />
     </div>
   )
 }

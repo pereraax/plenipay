@@ -144,3 +144,5 @@ npm run dev
 
 **🎉 Sistema pronto para usar qualquer uma dessas IAs!**
 
+
+

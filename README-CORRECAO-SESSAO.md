@@ -48,3 +48,5 @@ Para que tudo funcione, você PRECISA ter a `SUPABASE_SERVICE_ROLE_KEY` configur
 
 **Teste criando uma nova conta agora!**
 
+
+

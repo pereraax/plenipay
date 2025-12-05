@@ -34,36 +34,17 @@ export default function EmailVerificadoGuard({ children, feature = 'esta funcion
         // Se foi, provavelmente foi pelo bypass automático e deve ser considerado NÃO confirmado
         
         const emailConfirmedAt = user.email_confirmed_at
-        const createdAt = user.created_at
         
-        let isConfirmed = false
+        // Se email_confirmed_at existe e não é null, está confirmado
+        const isConfirmed = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== ''
         
-        // Se email_confirmed_at é null ou undefined, email NÃO está confirmado
-        if (!emailConfirmedAt) {
-          isConfirmed = false
-        } else if (emailConfirmedAt && createdAt) {
-          // Se ambos existem, verificar se foi confirmado manualmente (não pelo bypass)
-          try {
-            const confirmedDate = new Date(emailConfirmedAt)
-            const createdDate = new Date(createdAt)
-            const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
-            
-            // CRÍTICO: Se foi confirmado em menos de 30 segundos, foi provavelmente pelo bypass
-            // Considerar como NÃO confirmado para forçar verificação manual
-            // Se foi confirmado em 30+ segundos, provavelmente foi manual (contar como confirmado)
-            isConfirmed = diffSeconds >= 30
-            
-            console.log('🔍 EmailVerificadoGuard - Verificação:', {
-              diffSeconds,
-              isConfirmed,
-              motivo: diffSeconds < 30 ? 'confirmado pelo bypass (não contar)' : 'confirmado manualmente'
-            })
-          } catch (error) {
-            console.error('Erro ao comparar datas:', error)
-            // Em caso de erro, considerar como não confirmado por segurança
-            isConfirmed = false
-          }
-        }
+        // Forçar refresh da sessão para garantir estado atualizado
+        await supabase.auth.refreshSession()
+        
+        console.log('🔍 EmailVerificadoGuard - Verificação:', {
+          emailConfirmedAt,
+          isConfirmed
+        })
         
         console.log('🔍 EmailVerificadoGuard - Verificando email:', {
           email: user.email,

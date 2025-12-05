@@ -24,7 +24,7 @@ const menuItems = [
   { href: '/administracaosecr/tutoriais', label: 'Tutoriais', icon: PlayCircle },
 ]
 
-export default function AdminSidebar() {
+export default function AdminSidebar({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -33,8 +33,15 @@ export default function AdminSidebar() {
     router.push('/administracaosecr/login')
   }
 
+  const handleNavigation = (href: string) => {
+    router.push(href)
+    if (onClose) {
+      onClose()
+    }
+  }
+
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-brand-royal border-r border-white/10 shadow-lg z-50 hidden lg:block">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-brand-royal border-r border-white/10 shadow-lg z-50">
       <div className="p-6">
         <div className="mb-8">
           <div className="flex items-center gap-3 mb-2">
@@ -45,7 +52,7 @@ export default function AdminSidebar() {
               <h2 className="text-lg font-display font-bold text-brand-clean">
                 Admin Panel
               </h2>
-              <p className="text-xs text-brand-clean/60">
+              <p className="text-xs font-semibold text-brand-clean/60">
                 PLENIPAY
               </p>
             </div>
@@ -61,7 +68,7 @@ export default function AdminSidebar() {
             return (
               <button
                 key={item.href}
-                onClick={() => router.push(item.href)}
+                onClick={() => handleNavigation(item.href)}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth text-left ${
                   isActive
                     ? 'bg-brand-aqua text-brand-midnight shadow-lg'
@@ -69,7 +76,7 @@ export default function AdminSidebar() {
                 }`}
               >
                 <Icon size={20} strokeWidth={2} />
-                <span className="font-medium">{item.label}</span>
+                <span className="font-bold">{item.label}</span>
               </button>
             )
           })}
@@ -80,7 +87,7 @@ export default function AdminSidebar() {
           className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth text-left text-brand-clean hover:bg-red-900/20 hover:text-red-400"
         >
           <LogOut size={20} strokeWidth={2} />
-          <span className="font-medium">Sair</span>
+          <span className="font-bold">Sair</span>
         </button>
       </div>
     </aside>

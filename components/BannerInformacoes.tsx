@@ -21,6 +21,13 @@ export default function BannerInformacoes() {
 
   useEffect(() => {
     carregarBanners()
+    
+    // Timeout de segurança: garantir que loading seja false após 5 segundos
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 5000)
+    
+    return () => clearTimeout(timeout)
   }, [])
 
   useEffect(() => {
@@ -41,20 +48,37 @@ export default function BannerInformacoes() {
 
   const carregarBanners = async () => {
     try {
-      const response = await fetch('/api/banners')
+      console.log('🔄 [BannerInformacoes] Iniciando carregamento de banners...')
+      const response = await fetch('/api/banners', {
+        cache: 'no-store', // Garantir que sempre busca dados atualizados
+        headers: {
+          'Cache-Control': 'no-cache'
+        }
+      })
+      
+      console.log('📡 [BannerInformacoes] Resposta da API:', response.status, response.statusText)
+      
       if (response.ok) {
         const data = await response.json()
         const bannersAtivos = data.banners || []
+        console.log('✅ [BannerInformacoes] Banners carregados:', bannersAtivos.length, bannersAtivos)
         setBanners(bannersAtivos)
         // Usar tempo do primeiro banner como padrão, se disponível
         if (bannersAtivos.length > 0) {
           setTempoTransicao(bannersAtivos[0].tempo_transicao || 5)
+          console.log('⏱️ [BannerInformacoes] Tempo de transição configurado:', bannersAtivos[0].tempo_transicao || 5)
+        } else {
+          console.warn('⚠️ [BannerInformacoes] Nenhum banner ativo encontrado')
         }
+      } else {
+        const errorText = await response.text()
+        console.error('❌ [BannerInformacoes] Erro na resposta da API:', response.status, errorText)
       }
     } catch (error) {
-      console.error('Erro ao carregar banners:', error)
+      console.error('❌ [BannerInformacoes] Erro ao carregar banners:', error)
     } finally {
       setLoading(false)
+      console.log('🏁 [BannerInformacoes] Carregamento finalizado. Loading:', false)
     }
   }
 
@@ -85,21 +109,44 @@ export default function BannerInformacoes() {
     }
   }
 
-  if (loading) {
+  // Debug: sempre logar o estado
+  console.log('🎨 [BannerInformacoes] Renderizando. Loading:', loading, 'Banners:', banners.length)
+
+  // Não renderizar nada se não houver banners (após carregar)
+  if (!loading && banners.length === 0) {
+    console.log('🚫 [BannerInformacoes] Não renderizando: nenhum banner encontrado')
     return null
   }
 
-  if (banners.length === 0) {
-    return null
+  // Mostrar loading apenas se ainda estiver carregando
+  if (loading) {
+    console.log('⏳ [BannerInformacoes] Mostrando loading...')
+    return (
+      <div className="mb-6 w-full flex justify-center">
+        <div 
+          className="rounded-2xl shadow-lg relative overflow-hidden w-full bg-brand-midnight/50 animate-pulse"
+          style={{ 
+            aspectRatio: '8/3', // 1920x720 = 2.666... ≈ 8/3
+            maxWidth: '1920px',
+            maxHeight: '720px',
+            minHeight: '120px'
+          }}
+        />
+      </div>
+    )
   }
+
+  console.log('✅ [BannerInformacoes] Renderizando banner com', banners.length, 'banners')
 
   return (
-    <div className="mb-6">
+    <div className="mb-6 w-full flex justify-center">
       <div 
         ref={containerRef}
         className="rounded-2xl shadow-lg relative overflow-hidden w-full bg-brand-midnight/50"
         style={{ 
-          aspectRatio: '16/9'
+          aspectRatio: '8/3', // 1920x720 = 2.666... ≈ 8/3
+          maxWidth: '1920px',
+          maxHeight: '720px'
         }}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
@@ -128,9 +175,8 @@ export default function BannerInformacoes() {
               <img
                 src={banner.imagem_url}
                 alt={`Banner ${index + 1}`}
-                className="w-full h-full"
                 style={{ 
-                  objectFit: 'contain',
+                  objectFit: 'cover',
                   objectPosition: 'center',
                   display: 'block',
                   width: '100%',

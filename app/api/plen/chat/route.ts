@@ -1,34 +1,127 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { obterDividas, obterRegistros, obterEstatisticas, criarRegistro } from '@/lib/actions'
-import { obterPlanoUsuario, obterFeaturesUsuario } from '@/lib/plano'
+import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { obterDividas, obterRegistros, obterEstatisticas, criarRegistro, obterUsuarios } from '@/lib/actions'
+import { obterPlanoUsuario, obterFeaturesUsuario, podeCriarRegistro } from '@/lib/plano'
 import { format, startOfWeek, endOfWeek, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
 
+// Função auxiliar para obter ou criar usuário padrão na tabela users
+async function obterOuCriarUsuarioPadrao(supabase: any, authUserId: string, authUserEmail: string): Promise<string | null> {
+  try {
+    // Buscar usuários da tabela users onde account_owner_id = authUserId
+    const { data: usuarios, error: usuariosError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('account_owner_id', authUserId)
+      .limit(1)
+    
+    if (usuariosError) {
+      console.error('❌ [PLEN] Erro ao buscar usuários:', usuariosError)
+      return null
+    }
+    
+    // Se encontrou um usuário, usar o ID
+    if (usuarios && usuarios.length > 0) {
+      console.log('✅ [PLEN] Usuário encontrado na tabela users:', usuarios[0].id)
+      return usuarios[0].id
+    }
+    
+    // CRÍTICO: NÃO criar usuário automaticamente!
+    // O sistema deve exigir que o usuário crie manualmente os usuários/pessoas
+    // Se não houver usuários, retornar null e o PLEN deve informar que precisa criar um usuário primeiro
+    console.log('⚠️ [PLEN] Nenhum usuário encontrado na tabela users. Usuário precisa criar manualmente em Configurações → Usuários/Pessoas.')
+    return null
+  } catch (error: any) {
+    console.error('❌ [PLEN] Exceção ao obter usuário:', error)
+    return null
+  }
+}
+
 // Função para verificar se email está confirmado
 async function verificarEmailConfirmado(user: any): Promise<boolean> {
-  const emailConfirmedAt = user.email_confirmed_at
-  const createdAt = user.created_at
-  
-  if (!emailConfirmedAt) {
+  if (!user || !user.id) {
+    console.error('❌ PLEN - Usuário ou ID não fornecido')
     return false
   }
   
-  if (emailConfirmedAt && createdAt) {
+  // PRIMEIRO: Tentar buscar diretamente do banco usando Admin Client (mais confiável)
+  const supabaseAdmin = createAdminClient()
+  if (supabaseAdmin) {
     try {
-      const confirmedDate = new Date(emailConfirmedAt)
-      const createdDate = new Date(createdAt)
-      const diffSeconds = Math.abs((confirmedDate.getTime() - createdDate.getTime()) / 1000)
+      // Buscar usuário diretamente do banco de dados usando Admin Client
+      // Isso bypassa qualquer cache da sessão e pega o estado REAL do banco
+      const { data: adminUser, error: adminError } = await supabaseAdmin.auth.admin.getUserById(user.id)
       
-      // Se foi confirmado em menos de 30 segundos, foi provavelmente pelo bypass
-      // Considerar como NÃO confirmado
-      return diffSeconds >= 30
-    } catch (error) {
-      return false
+      if (!adminError && adminUser?.user) {
+        const emailConfirmedAt = adminUser.user.email_confirmed_at
+        const isConfirmed = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== ''
+        
+        console.log('🔍 PLEN - Verificando email confirmado (via Admin):', {
+          email: adminUser.user.email,
+          email_confirmed_at: emailConfirmedAt,
+          isConfirmed,
+          userId: adminUser.user.id,
+          tipo: typeof emailConfirmedAt
+        })
+        
+        return isConfirmed
+      } else {
+        console.warn('⚠️ PLEN - Erro ao buscar via Admin, tentando método alternativo:', adminError?.message)
+      }
+    } catch (adminException: any) {
+      console.warn('⚠️ PLEN - Exceção ao buscar via Admin:', adminException?.message)
     }
   }
   
-  return !!emailConfirmedAt
+  // FALLBACK: Buscar usuário atualizado do Supabase via cliente normal
+  const supabase = await createClient()
+  
+  // CRÍTICO: Forçar refresh da sessão primeiro para garantir estado atualizado
+  try {
+    const { error: refreshError } = await supabase.auth.refreshSession()
+    if (refreshError) {
+      console.warn('⚠️ PLEN - Erro ao fazer refresh da sessão:', refreshError.message)
+    } else {
+      console.log('✅ PLEN - Sessão atualizada com sucesso')
+    }
+  } catch (refreshException: any) {
+    console.warn('⚠️ PLEN - Exceção ao fazer refresh da sessão:', refreshException?.message)
+  }
+  
+  // Aguardar um pouco para garantir que o refresh foi processado
+  await new Promise(resolve => setTimeout(resolve, 300))
+  
+  // Forçar refresh do usuário para garantir estado mais recente
+  const { data: { user: updatedUser }, error: userError } = await supabase.auth.getUser()
+  
+  if (userError || !updatedUser) {
+    console.error('❌ PLEN - Erro ao buscar usuário atualizado:', userError)
+    // Se não conseguir buscar atualizado, usar o que temos
+    const emailConfirmedAt = user?.email_confirmed_at
+    const isConfirmed = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== ''
+    console.log('🔍 PLEN - Usando dados do usuário original:', {
+      email: user?.email,
+      email_confirmed_at: emailConfirmedAt,
+      isConfirmed
+    })
+    return isConfirmed
+  }
+  
+  // Verificar se email_confirmed_at existe e não é null
+  // Se existe, foi confirmado via link do email - simples assim!
+  const emailConfirmedAt = updatedUser.email_confirmed_at
+  
+  const isConfirmed = emailConfirmedAt !== null && emailConfirmedAt !== undefined && emailConfirmedAt !== ''
+  
+  console.log('🔍 PLEN - Verificando email confirmado (via Client):', {
+    email: updatedUser.email,
+    email_confirmed_at: emailConfirmedAt,
+    isConfirmed,
+    userId: updatedUser.id,
+    tipo: typeof emailConfirmedAt
+  })
+  
+  return isConfirmed
 }
 
 // Função para verificar permissões antes de executar comando
@@ -39,7 +132,7 @@ async function verificarPermissoes(
   user: any,
   tipoComando: string,
   descricao?: string
-): Promise<{ permitido: boolean; motivo?: string }> {
+): Promise<{ permitido: boolean; motivo?: string; upgradeRequired?: boolean; featureName?: string; requiredPlan?: string }> {
   // ===== ETAPA 1: VERIFICAR SE EMAIL ESTÁ CONFIRMADO =====
   // Esta é a verificação PRIMÁRIA - sem email confirmado, nenhuma funcionalidade funciona
   const emailConfirmado = await verificarEmailConfirmado(user)
@@ -72,7 +165,10 @@ async function verificarPermissoes(
     if (!features.podeCriarDividas) {
       return {
         permitido: false,
-        motivo: `❌ **Não foi possível criar a dívida.** Para criar dívidas, você precisa fazer upgrade do seu plano. Você está no plano **${plano.toUpperCase()}**, mas criar dívidas está disponível apenas para planos **Básico** ou **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+        motivo: `Infelizmente, você não tem acesso à funcionalidade de criar dívidas no seu plano atual (${plano.toUpperCase()}). Esta funcionalidade está disponível nos planos Básico ou Premium.`,
+        upgradeRequired: true,
+        featureName: 'Criar Dívidas',
+        requiredPlan: 'Básico ou Premium'
       }
     }
   }
@@ -85,7 +181,10 @@ async function verificarPermissoes(
       if (!features.podeRegistrarSalario) {
         return {
           permitido: false,
-          motivo: `❌ **Não foi possível registrar o salário.** Para registrar salários, você precisa fazer upgrade do seu plano. Você está no plano **${plano.toUpperCase()}**, mas registrar salários está disponível apenas para planos **Básico** ou **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+          motivo: `Infelizmente, você não tem acesso à funcionalidade de registrar salários no seu plano atual (${plano.toUpperCase()}). Esta funcionalidade está disponível nos planos Básico ou Premium.`,
+          upgradeRequired: true,
+          featureName: 'Registrar Salários',
+          requiredPlan: 'Básico ou Premium'
         }
       }
     }
@@ -97,7 +196,10 @@ async function verificarPermissoes(
     if (!features.podeCriarEmprestimos) {
       return {
         permitido: false,
-        motivo: `❌ **Não foi possível criar o empréstimo.** Para criar empréstimos, você precisa fazer upgrade para o plano **Premium**. Você está no plano **${plano.toUpperCase()}**, mas criar empréstimos está disponível apenas no plano **Premium**. Acesse **Configurações → Perfil** e clique em "Fazer Upgrade" para desbloquear esta funcionalidade.`
+        motivo: `Infelizmente, você não tem acesso à funcionalidade de criar empréstimos no seu plano atual (${plano.toUpperCase()}). Esta funcionalidade está disponível apenas no plano Premium.`,
+        upgradeRequired: true,
+        featureName: 'Criar Empréstimos',
+        requiredPlan: 'Premium'
       }
     }
   }
@@ -115,7 +217,8 @@ function processarComando(mensagem: string, dados: any) {
   // Padrões de comandos
   const padroes = {
     // Consultas - Melhorado para capturar mais variações de perguntas sobre dívidas
-    dividas: /(dividas?|dívidas?|quais.*dividas?|mostre.*dividas?|lista.*dividas?|qual.*total.*dividas?|quanto.*dividas?|quantas.*dividas?|qual.*divida|quanto.*devo|quanto.*tenho.*divida|total.*dividas?|divida.*total)/i,
+    // IMPORTANTE: NÃO capturar "divida [número]" como consulta - isso é registro!
+    dividas: /(dividas?|dívidas?|quais.*dividas?|mostre.*dividas?|lista.*dividas?|qual.*total.*dividas?|quanto.*dividas?|quantas.*dividas?|qual.*divida|quanto.*devo|quanto.*tenho.*divida|total.*dividas?|divida.*total)(?!\s+[\d.,])/i,
     gastosSemana: /(gastos?.*semana|quanto.*gastou.*semana|gastou.*semana|despesas?.*semana)/i,
     gastosMes: /(gastos?.*m[eê]s|quanto.*gastou.*m[eê]s|gastou.*m[eê]s|despesas?.*m[eê]s)/i,
     totalEntradas: /(entradas?|receitas?|quanto.*recebeu|total.*entradas?)/i,
@@ -133,7 +236,11 @@ function processarComando(mensagem: string, dados: any) {
     
     // CRÍTICO: Se é comando de REGISTRO de dívida, marcar para não tratar como consulta
     // A extração de valor e descrição acontecerá mais abaixo
-    const isRegistroDivida = padroes.registrarDivida.test(msgLower)
+    // Padrões de registro: "divida 30 tia", "divida de 30", "divida de 20 reais josin", etc
+    const isRegistroDivida = padroes.registrarDivida.test(msgLower) ||
+                              /(divida|dívida)\s+(?:de\s+)?[\d.,]+\s*(?:reais?|r\$)?/i.test(msgLower) || // "divida de 20 reais" ou "divida 20"
+                              /^(divida|dívida)\s+[\d.,]+/i.test(msgLower) || // "divida 30" no início
+                              /\b(divida|dívida)\s+[\d.,]+\s+\w+/i.test(msgLower) // "divida 30 tia"
     
     // Verificar outros comandos de registro ANTES de consultas
     if (padroes.registrarGasto.test(msgLower) || padroes.pagamentoDireto.test(msgLower)) {
@@ -145,7 +252,9 @@ function processarComando(mensagem: string, dados: any) {
     }
     
     // Só depois verificar consultas (mas NÃO se for comando de registro)
-    if (padroes.dividas.test(msgLower) && !isRegistroDivida) {
+    // CRÍTICO: Se tem número após "divida", é registro, não consulta!
+    const temNumeroAposDivida = /(divida|dívida)\s+(?:de\s+)?[\d.,]+/i.test(msgLower)
+    if (padroes.dividas.test(msgLower) && !isRegistroDivida && !temNumeroAposDivida) {
       return { tipo: 'consultar_dividas', dados }
     }
     
@@ -224,35 +333,71 @@ function processarComando(mensagem: string, dados: any) {
                     /(recebi|receber|ganhei|ganhar|salário|entrada de|receita)/i.test(msgLower)
 
   // Detectar se é dívida ANTES de entrada/gasto (prioridade)
+  // Padrões mais flexíveis: "divida 30 tia", "divida de 30 tia", "divida de 20 reais josin", etc
   const isDivida = padroes.registrarDivida.test(msgLower) ||
                    /(tenho|tenho uma|preciso|preciso registrar|devendo|devo|deve).*(divida|dívida|pagar|pago)/i.test(msgLower) ||
-                   /(divida|dívida).*(de|de\s+)?[\d.,]+\s*(?:reais?|r\$)/i.test(msgLower)
+                   /(divida|dívida)\s+(?:de\s+)?[\d.,]+\s*(?:reais?|r\$)?/i.test(msgLower) || // "divida de 20 reais" ou "divida 20"
+                   /^(divida|dívida)\s+[\d.,]+/i.test(msgLower) || // "divida 30" no início
+                   /\b(divida|dívida)\s+[\d.,]+\s+\w+/i.test(msgLower) // "divida 30 tia"
   
   // Se encontrou valor E é dívida, tratar como registro de dívida (PRIORIDADE)
-  if (isDivida && valor) {
+  // OU se é dívida mesmo sem valor explícito (ex: "divida 30 tia", "divida de 20 reais josin")
+  if (isDivida) {
+    console.log('🔍 [PLEN] Detectado como dívida. Valor atual:', valor, 'Mensagem:', mensagem)
+    
+    // Se não tem valor ainda mas tem número após "divida", extrair
+    if (!valor) {
+      // Tentar padrão: "divida de 20 reais" ou "divida 20"
+      const valorMatch = msgLower.match(/(?:divida|dívida)\s+(?:de\s+)?([\d.,]+)/i)
+      if (valorMatch && valorMatch[1]) {
+        const valorStr = valorMatch[1].replace(/\./g, '').replace(',', '.')
+        valor = parseFloat(valorStr)
+        if (isNaN(valor) || valor <= 0) {
+          valor = null
+        } else {
+          console.log('✅ [PLEN] Valor extraído da dívida:', valor)
+        }
+      }
+    }
+    
+    // Se ainda não tem valor válido, não processar como registro
+    if (!valor) {
+      console.log('⚠️ [PLEN] Dívida detectada mas sem valor válido. Tratando como consulta.')
+      // Mas ainda pode ser uma consulta, então deixar passar
+      return { tipo: 'nenhum', dados: {} }
+    }
     // Extrair descrição da dívida
     let descricao = ''
     
-    // Padrão 1: "tenho uma dívida de X de [descrição]"
-    const dividaDeMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+de\s+([^,\.]+)/i)
-    if (dividaDeMatch && dividaDeMatch[1]) {
-      descricao = dividaDeMatch[1].trim()
+    // Padrão 1: "divida 30 tia", "divida de 30 tia", "divida de 20 reais josin" (mais simples primeiro)
+    // Captura tudo após o valor (e opcionalmente "reais")
+    const dividaSimplesMatch = mensagem.match(/(?:divida|dívida)\s+(?:de\s+)?[\d.,]+\s*(?:reais?|r\$)?\s+(.+)/i)
+    if (dividaSimplesMatch && dividaSimplesMatch[1]) {
+      descricao = dividaSimplesMatch[1].trim()
+      // Limpar palavras comuns no início
+      descricao = descricao.replace(/^(?:com|de|para|para\s+o|para\s+a)\s+/i, '')
     } else {
-      // Padrão 2: "tenho uma dívida de X para [descrição]"
-      const dividaParaMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+para\s+([^,\.]+)/i)
-      if (dividaParaMatch && dividaParaMatch[1]) {
-        descricao = dividaParaMatch[1].trim()
+      // Padrão 2: "tenho uma dívida de X de [descrição]"
+      const dividaDeMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+de\s+([^,\.]+)/i)
+      if (dividaDeMatch && dividaDeMatch[1]) {
+        descricao = dividaDeMatch[1].trim()
       } else {
-        // Padrão 3: "tenho uma dívida de X com [descrição]"
-        const dividaComMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+com\s+([^,\.]+)/i)
-        if (dividaComMatch && dividaComMatch[1]) {
-          descricao = dividaComMatch[1].trim()
+        // Padrão 3: "tenho uma dívida de X para [descrição]"
+        const dividaParaMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+para\s+([^,\.]+)/i)
+        if (dividaParaMatch && dividaParaMatch[1]) {
+          descricao = dividaParaMatch[1].trim()
         } else {
-          // Padrão 4: pegar tudo após o número
-          const partes = mensagem.split(/[\d.,]+\s*(?:reais?|r\$)?/i)
-          if (partes.length > 1) {
-            descricao = partes[1].trim()
-            descricao = descricao.replace(/^(?:registrar|adicionar|inserir|cadastrar|criar|divida|dívida|deve|devendo|tenho|tenho uma|preciso|preciso registrar|de|para|com|com\s+)\s*/i, '')
+          // Padrão 4: "tenho uma dívida de X com [descrição]"
+          const dividaComMatch = mensagem.match(/(?:divida|dívida|deve|devendo|tenho|preciso).*?[\d.,]+\s*(?:reais?|r\$)?\s+com\s+([^,\.]+)/i)
+          if (dividaComMatch && dividaComMatch[1]) {
+            descricao = dividaComMatch[1].trim()
+          } else {
+            // Padrão 5: pegar tudo após o número
+            const partes = mensagem.split(/[\d.,]+\s*(?:reais?|r\$)?/i)
+            if (partes.length > 1) {
+              descricao = partes[1].trim()
+              descricao = descricao.replace(/^(?:registrar|adicionar|inserir|cadastrar|criar|divida|dívida|deve|devendo|tenho|tenho uma|preciso|preciso registrar|de|para|com|com\s+)\s*/i, '')
+            }
           }
         }
       }
@@ -850,7 +995,7 @@ function processarComandoLocal(mensagem: string, contexto: any, historico: any[]
       return `Suas saídas totalizam R$ ${saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}.`
     
     default:
-      return 'Olá! Eu sou o PLEN, seu assistente financeiro. Como posso ajudar?\n\n💡 **Comandos disponíveis:**\n\n• "Registre um gasto de R$ 50,00 com alimentação"\n• "Adicione uma entrada de R$ 1.000,00"\n• "Quais são minhas dívidas?"\n• "Quanto gastei na semana?"\n• "Quanto gastei no mês?"\n• "Quais são minhas entradas?"\n• "Quais são minhas saídas?"\n\nVocê pode falar ou digitar! 🎤💬'
+      return 'Olá! Eu sou o PLEN, seu assistente financeiro inteligente. Estou aqui para ajudá-lo a gerenciar suas finanças de forma simples e eficiente.\n\n📝 Para registrar um novo lançamento, você pode me informar de forma natural, por exemplo:\n\n• "ganhei 100 reais de ana"\n• "gastei 40 no shopping"\n• "ganhei 20 da tia"\n• "divida de 2000 sofá"\n\nEu processarei e registrarei essas informações da melhor forma possível. Como posso ajudá-lo hoje?'
   }
 }
 
@@ -1016,6 +1161,21 @@ export async function POST(request: NextRequest) {
       
       if (!permissoes.permitido) {
         console.log('⚠️ [PLEN] Permissão negada:', permissoes.motivo)
+        
+        // Se precisa de upgrade, retornar actionData com botão
+        if (permissoes.upgradeRequired) {
+          return NextResponse.json({
+            response: permissoes.motivo || 'Você não tem permissão para executar esta ação.',
+            actionData: {
+              action: 'upgrade_required',
+              featureName: permissoes.featureName,
+              requiredPlan: permissoes.requiredPlan,
+              buttonText: 'Assinar Plano',
+              buttonUrl: '/configuracoes?tab=perfil'
+            }
+          })
+        }
+        
         return NextResponse.json({
           response: permissoes.motivo || 'Você não tem permissão para executar esta ação.',
           actionData: null
@@ -1058,14 +1218,51 @@ export async function POST(request: NextRequest) {
       if (!permissoes.permitido) {
         console.log('⚠️ [PLEN] Permissão negada na confirmação:', permissoes.motivo)
         resposta = permissoes.motivo || 'Você não tem permissão para executar esta ação.'
+        
+        // Se precisa de upgrade, adicionar actionData com botão
+        if (permissoes.upgradeRequired) {
+          actionData = {
+            action: 'upgrade_required',
+            featureName: permissoes.featureName,
+            requiredPlan: permissoes.requiredPlan,
+            buttonText: 'Assinar Plano',
+            buttonUrl: '/configuracoes?tab=perfil'
+          }
+        }
+        
         pendingConfirmation = null // Limpar confirmação pendente
       } else {
-        const { data: usuarios } = await supabase
-          .from('users')
-          .select('id')
-          .limit(1)
+        // Verificar se pode criar registro (limite mensal)
+        const podeCriar = await podeCriarRegistro()
+        if (!podeCriar.pode) {
+          console.log('⚠️ [PLEN] Não pode criar registro (confirmação):', podeCriar.motivo)
+          resposta = `❌ ${podeCriar.motivo || 'Não foi possível criar o registro.'}`
+          pendingConfirmation = null
+          return NextResponse.json({
+            response: resposta,
+            actionData: null
+          })
+        }
         
-        const user_id = usuarios && usuarios.length > 0 ? usuarios[0].id : user.id
+        // Obter ou criar usuário na tabela users (não auth.users)
+        const user_id = await obterOuCriarUsuarioPadrao(supabase, user.id, user.email || '')
+        
+        if (!user_id) {
+          console.error('❌ [PLEN] Não foi possível obter/criar usuário na tabela users')
+          resposta = 'Desculpe, ocorreu um erro ao identificar o usuário. Tente novamente.'
+          pendingConfirmation = null
+          return NextResponse.json({
+            response: resposta,
+            actionData: null
+          })
+        }
+        
+        console.log('📝 [PLEN] Criando registro (confirmação):', {
+          user_id,
+          tipo: pendingConfirmation.tipo,
+          valor: pendingConfirmation.valor,
+          descricao: pendingConfirmation.descricao
+        })
         
         const formData = new FormData()
         formData.append('nome', pendingConfirmation.descricao)
@@ -1086,9 +1283,20 @@ export async function POST(request: NextRequest) {
 
         const resultado = await criarRegistro(formData)
         
+        console.log('📊 [PLEN] Resultado do registro (confirmação):', {
+          sucesso: !resultado.error,
+          error: resultado.error,
+          data: resultado.data
+        })
+        
         if (resultado.error) {
+          console.error('❌ [PLEN] Erro ao registrar (confirmação):', resultado.error)
           resposta = `Desculpe, não consegui registrar. Erro: ${resultado.error}`
+        } else if (!resultado.data) {
+          console.error('❌ [PLEN] Registro não retornou dados:', resultado)
+          resposta = `Desculpe, não consegui registrar. O registro não foi criado.`
         } else {
+          console.log('✅ [PLEN] Registro criado com sucesso (confirmação)! ID:', resultado.data.id)
           const tipoRegistro = pendingConfirmation.tipo === 'divida' ? 'Dívida' : pendingConfirmation.tipo === 'saida' ? 'Gasto' : 'Entrada'
           resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${pendingConfirmation.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${pendingConfirmation.descricao ? ` - ${pendingConfirmation.descricao}` : ''}`
           actionData = {
@@ -1110,14 +1318,34 @@ export async function POST(request: NextRequest) {
     else if (comando.tipo === 'registrar_gasto' || comando.tipo === 'registrar_entrada' || comando.tipo === 'registrar_divida') {
       console.log('✅ [PLEN] Executando registro:', comando.dados)
       
-      // Buscar o primeiro usuário disponível
-      const { data: usuarios } = await supabase
-        .from('users')
-        .select('id')
-        .limit(1)
+      // Verificar se pode criar registro (limite mensal)
+      const podeCriar = await podeCriarRegistro()
+      if (!podeCriar.pode) {
+        console.log('⚠️ [PLEN] Não pode criar registro:', podeCriar.motivo)
+        return NextResponse.json({
+          response: `❌ ${podeCriar.motivo || 'Não foi possível criar o registro.'}`,
+          actionData: null
+        })
+      }
       
-      // Usar o primeiro usuário ou o ID do usuário autenticado como fallback
-      const user_id = usuarios && usuarios.length > 0 ? usuarios[0].id : user.id
+      // Obter ou criar usuário na tabela users (não auth.users)
+      const user_id = await obterOuCriarUsuarioPadrao(supabase, user.id, user.email || '')
+      
+      if (!user_id) {
+        console.error('❌ [PLEN] Nenhum usuário encontrado na tabela users')
+        return NextResponse.json({
+          response: 'Para registrar transações, você precisa criar pelo menos um usuário/pessoa primeiro. Vá em Configurações → Usuários/Pessoas e clique em "+ Novo Usuário".',
+          actionData: null
+        })
+      }
+      
+      console.log('📝 [PLEN] Criando registro com:', {
+        user_id,
+        nome: comando.dados.descricao,
+        tipo: comando.dados.tipo,
+        valor: comando.dados.valor,
+        categoria: comando.dados.categoria || 'outros'
+      })
       
       const formData = new FormData()
       formData.append('nome', comando.dados.descricao)
@@ -1128,7 +1356,7 @@ export async function POST(request: NextRequest) {
       formData.append('metodo_pagamento', 'dinheiro')
       formData.append('parcelas_totais', '1')
       formData.append('parcelas_pagas', '0')
-      formData.append('user_id', user_id) // Adicionar user_id
+      formData.append('user_id', user_id)
       
       // Para dívidas, adicionar etiquetas específicas
       if (comando.tipo === 'registrar_divida') {
@@ -1137,24 +1365,24 @@ export async function POST(request: NextRequest) {
         formData.append('etiquetas', JSON.stringify(['dinheiro']))
       }
 
-      console.log('📝 [PLEN] Criando registro com:', {
-        nome: comando.dados.descricao,
-        tipo: comando.dados.tipo,
-        valor: comando.dados.valor,
-        categoria: comando.dados.categoria,
-        user_id: user_id
-      })
-
       const resultado = await criarRegistro(formData)
       
-      console.log('📊 [PLEN] Resultado do registro:', resultado)
+      console.log('📊 [PLEN] Resultado do registro:', {
+        sucesso: !resultado.error,
+        error: resultado.error,
+        data: resultado.data,
+        temId: !!resultado.data?.id
+      })
       
       if (resultado.error) {
         console.error('❌ [PLEN] Erro ao registrar:', resultado.error)
         const tipoRegistro = comando.dados.tipo === 'divida' ? 'dívida' : comando.dados.tipo === 'saida' ? 'gasto' : 'entrada'
         resposta = `Desculpe, não consegui registrar a ${tipoRegistro}. Erro: ${resultado.error}`
+      } else if (!resultado.data) {
+        console.error('❌ [PLEN] Registro não retornou dados:', resultado)
+        resposta = `Desculpe, não consegui registrar. O registro não foi criado.`
       } else {
-        console.log('✅ [PLEN] Registro criado com sucesso!')
+        console.log('✅ [PLEN] Registro criado com sucesso! ID:', resultado.data.id)
         const tipoRegistro = comando.dados.tipo === 'divida' ? 'Dívida' : comando.dados.tipo === 'saida' ? 'Gasto' : 'Entrada'
         resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${comando.dados.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${comando.dados.descricao ? ` - ${comando.dados.descricao}` : ''}`
         actionData = {

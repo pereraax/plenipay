@@ -28,21 +28,69 @@ export async function GET(request: NextRequest) {
       }
     )
 
-    const { error } = await supabase.auth.verifyOtp({
-      type: type as any,
-      token_hash,
-    })
+    // Verificar link de confirmação de email
+    if (type === 'email' || type === 'signup') {
+      // Para links de confirmação, usar verifyOtp com token_hash
+      // Isso confirma o email E cria uma sessão se possível
+      const { data, error } = await supabase.auth.verifyOtp({
+        type: type as any,
+        token_hash,
+      })
 
-    if (!error) {
-      // Email confirmado com sucesso, redirecionar para home
-      const redirectUrl = new URL(next, requestUrl.origin)
-      return NextResponse.redirect(redirectUrl)
+      if (!error && data?.user) {
+        console.log('✅ Email confirmado com sucesso via callback')
+        console.log('👤 Usuário:', data.user.id)
+        console.log('📧 Email:', data.user.email)
+        console.log('📧 Email confirmado:', !!data.user.email_confirmed_at)
+        console.log('🔑 Sessão criada:', !!data.session)
+        
+        // Se há sessão, redirecionar para home
+        if (data.session) {
+          console.log('✅ Sessão criada - redirecionando para home')
+          const redirectUrl = new URL(next, requestUrl.origin)
+          redirectUrl.searchParams.set('emailConfirmed', 'true')
+          return NextResponse.redirect(redirectUrl)
+        } else {
+          // Se não há sessão, redirecionar para login com flag de email confirmado
+          console.log('⚠️ Email confirmado mas sem sessão - redirecionando para login')
+          const redirectUrl = new URL('/login', requestUrl.origin)
+          redirectUrl.searchParams.set('emailConfirmed', 'true')
+          redirectUrl.searchParams.set('email', data.user.email || '')
+          return NextResponse.redirect(redirectUrl)
+        }
+      } else if (error) {
+        console.error('❌ Erro ao verificar link de confirmação:', error.message)
+      }
+    }
+    
+    // Tentar com verifyOtp para outros casos
+    if (token_hash) {
+      const { data, error } = await supabase.auth.verifyOtp({
+        type: type as any,
+        token_hash,
+      })
+
+      if (!error && data?.user) {
+        console.log('✅ Email confirmado com sucesso (método alternativo)')
+        console.log('🔑 Sessão criada:', !!data.session)
+        
+        if (data.session) {
+          const redirectUrl = new URL(next, requestUrl.origin)
+          redirectUrl.searchParams.set('emailConfirmed', 'true')
+          return NextResponse.redirect(redirectUrl)
+        } else {
+          const redirectUrl = new URL('/login', requestUrl.origin)
+          redirectUrl.searchParams.set('emailConfirmed', 'true')
+          redirectUrl.searchParams.set('email', data.user.email || '')
+          return NextResponse.redirect(redirectUrl)
+        }
+      }
     }
   }
 
   // Se houver erro ou parâmetros inválidos, redirecionar para login
   const redirectUrl = new URL('/login', requestUrl.origin)
-  redirectUrl.searchParams.set('error', 'Erro ao confirmar email')
+  redirectUrl.searchParams.set('error', 'Erro ao confirmar email. O link pode ter expirado.')
   return NextResponse.redirect(redirectUrl)
 }
 

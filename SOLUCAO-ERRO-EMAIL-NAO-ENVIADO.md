@@ -167,3 +167,5 @@ Se ainda não funcionar, me mostre:
 - Screenshot das configurações SMTP (sem mostrar a senha)
 - Qual erro aparece exatamente
 
+
+

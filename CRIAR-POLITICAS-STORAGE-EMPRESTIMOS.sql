@@ -65,3 +65,5 @@ USING (
 -- Execute esta query para verificar se as políticas foram criadas:
 -- SELECT * FROM pg_policies WHERE tablename = 'objects' AND schemaname = 'storage';
 
+
+

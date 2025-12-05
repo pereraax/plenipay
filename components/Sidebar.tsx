@@ -11,7 +11,8 @@ import {
   Settings,
   Loader2,
   PiggyBank,
-  PlayCircle
+  PlayCircle,
+  Crown
 } from 'lucide-react'
 import Logo from './Logo'
 
@@ -106,6 +107,24 @@ export default function Sidebar() {
               </button>
             )
           })}
+          
+          {/* Botão Fazer Upgrade - abaixo de Configurações */}
+          <div className="mt-6 pt-6 border-t border-brand-midnight/30">
+            <button
+              onClick={() => router.push('/upgrade')}
+              onMouseEnter={() => router.prefetch('/upgrade')}
+              className="w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth bg-gradient-to-r from-brand-aqua to-blue-500 hover:from-brand-aqua/90 hover:to-blue-400 shadow-lg hover:shadow-xl text-left group"
+            >
+              <Crown 
+                size={20} 
+                strokeWidth={2} 
+                className="text-white group-hover:scale-110 transition-transform"
+              />
+              <span className="font-semibold text-white">
+                Fazer Upgrade
+              </span>
+            </button>
+          </div>
         </nav>
       </div>
     </aside>

@@ -12,12 +12,14 @@ export default function AnimatedBackground() {
     const ctx = canvas.getContext('2d', { alpha: false })
     if (!ctx) return
 
-    // Configurar tamanho do canvas
+    // Configurar tamanho do canvas (um pouco maior para evitar bordas com blur)
+    const padding = 100 // Padding extra para evitar bordas com blur
     const resizeCanvas = () => {
       const dpr = window.devicePixelRatio || 1
-      canvas.width = window.innerWidth * dpr
-      canvas.height = window.innerHeight * dpr
+      canvas.width = (window.innerWidth + padding * 2) * dpr
+      canvas.height = (window.innerHeight + padding * 2) * dpr
       ctx.scale(dpr, dpr)
+      ctx.setTransform(dpr, 0, 0, dpr, padding, padding) // Resetar transformação e aplicar padding
       canvas.style.width = window.innerWidth + 'px'
       canvas.style.height = window.innerHeight + 'px'
     }
@@ -89,9 +91,9 @@ export default function AnimatedBackground() {
         gradient.addColorStop(0.5, colors.midnight)
         gradient.addColorStop(1, colors.royal)
 
-        // Preencher com gradiente
+        // Preencher com gradiente (incluindo padding para evitar bordas)
         ctx.fillStyle = gradient
-        ctx.fillRect(0, 0, window.innerWidth, window.innerHeight)
+        ctx.fillRect(-padding, -padding, window.innerWidth + padding * 2, window.innerHeight + padding * 2)
 
         // Desenhar partículas de luz com blur
         particles.forEach((particle, index) => {
@@ -157,15 +159,27 @@ export default function AnimatedBackground() {
   }, [])
 
   return (
-    <canvas
-      ref={canvasRef}
-      className="fixed inset-0 w-full h-full z-0"
-      style={{ 
-        background: '#1B263B', // Usar royal como cor base para evitar bordas escuras
-        filter: 'blur(60px)', // Aplicar blur CSS para muito mais desfoque
-        pointerEvents: 'none', // Permitir cliques através do canvas
+    <div 
+      className="fixed inset-0 w-full h-full z-0 overflow-hidden"
+      style={{
+        background: '#0D1B2A', // Cor de fundo escura para cobrir bordas
       }}
-    />
+    >
+      <canvas
+        ref={canvasRef}
+        className="absolute inset-0 w-full h-full"
+        style={{ 
+          filter: 'blur(60px)', // Aplicar blur CSS para muito mais desfoque
+          pointerEvents: 'none', // Permitir cliques através do canvas
+          position: 'absolute',
+          top: '-100px', // Offset negativo para compensar padding
+          left: '-100px',
+          width: 'calc(100% + 200px)', // Largura maior para cobrir blur
+          height: 'calc(100% + 200px)', // Altura maior para cobrir blur
+          zIndex: 0,
+        }}
+      />
+    </div>
   )
 }
 

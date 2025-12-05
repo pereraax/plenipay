@@ -159,3 +159,5 @@ GROQ_MODEL=llama-3.1-8b-instant
 
 **🚀 Pronto! Seu PLEN agora está usando Groq - a IA gratuita mais rápida do mercado!**
 
+
+
