@@ -3,7 +3,7 @@
 import { X, Mail, Phone, Calendar, CreditCard, Key, User, Send, Loader2, Crown, Settings, AlertTriangle } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 interface Usuario {
   id: string
@@ -20,6 +20,7 @@ interface Usuario {
 interface ModalDetalhesUsuarioProps {
   usuario: Usuario | null
   onClose: () => void
+  onPlanoAlterado?: (usuarioId: string, novoPlano: 'teste' | 'basico' | 'premium') => void
 }
 
 const planoColors = {
@@ -34,36 +35,72 @@ const planoLabels = {
   premium: 'Premium',
 }
 
-export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhesUsuarioProps) {
+export default function ModalDetalhesUsuario({ usuario, onClose, onPlanoAlterado }: ModalDetalhesUsuarioProps) {
   const [enviando, setEnviando] = useState(false)
   const [alterandoPlano, setAlterandoPlano] = useState(false)
   const [mostrarAlterarPlano, setMostrarAlterarPlano] = useState(false)
   const [novoPlano, setNovoPlano] = useState<'teste' | 'basico' | 'premium'>(usuario?.plano || 'teste')
   const [novoStatus, setNovoStatus] = useState<'trial' | 'ativo' | 'cancelado' | 'expirado'>('ativo')
   const [mensagem, setMensagem] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null)
+  const [usuarioLocal, setUsuarioLocal] = useState<Usuario | null>(usuario)
 
-  if (!usuario) return null
+  // Atualizar usuário local quando prop usuario mudar
+  useEffect(() => {
+    setUsuarioLocal(usuario)
+  }, [usuario])
+
+  // Resetar novoPlano quando usuario mudar ou quando abrir modal de alteração
+  useEffect(() => {
+    if (usuarioLocal) {
+      setNovoPlano(usuarioLocal.plano)
+      // Resetar status baseado no plano atual
+      if (usuarioLocal.plano === 'teste') {
+        setNovoStatus('trial')
+      } else {
+        setNovoStatus('ativo')
+      }
+    }
+  }, [usuarioLocal])
+
+  // Atualizar status quando novoPlano mudar
+  useEffect(() => {
+    if (novoPlano === 'teste') {
+      setNovoStatus('trial')
+    } else if (!mostrarAlterarPlano) {
+      // Só atualizar se não estiver no formulário ainda
+      setNovoStatus('ativo')
+    }
+  }, [novoPlano, mostrarAlterarPlano])
+
+  if (!usuarioLocal) return null
 
   // Verificar se o usuário não fez login há 7 dias ou mais
   const verificarInatividade = () => {
-    if (!usuario.last_sign_in_at) {
+    if (!usuarioLocal?.last_sign_in_at) {
       // Se nunca fez login, verificar se passou 7 dias desde o cadastro
-      const diasDesdeCadastro = Math.floor((new Date().getTime() - new Date(usuario.created_at).getTime()) / (1000 * 60 * 60 * 24))
+      const diasDesdeCadastro = Math.floor((new Date().getTime() - new Date(usuarioLocal.created_at).getTime()) / (1000 * 60 * 60 * 24))
       return diasDesdeCadastro >= 7
     }
     
-    const diasSemLogin = Math.floor((new Date().getTime() - new Date(usuario.last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24))
+    const diasSemLogin = Math.floor((new Date().getTime() - new Date(usuarioLocal.last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24))
     return diasSemLogin >= 7
   }
 
   const isInativo = verificarInatividade()
-  const diasInativo = usuario.last_sign_in_at 
-    ? Math.floor((new Date().getTime() - new Date(usuario.last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24))
-    : Math.floor((new Date().getTime() - new Date(usuario.created_at).getTime()) / (1000 * 60 * 60 * 24))
+  const diasInativo = usuarioLocal?.last_sign_in_at 
+    ? Math.floor((new Date().getTime() - new Date(usuarioLocal.last_sign_in_at).getTime()) / (1000 * 60 * 60 * 24))
+    : Math.floor((new Date().getTime() - new Date(usuarioLocal?.created_at || '').getTime()) / (1000 * 60 * 60 * 24))
 
   const handleEnviarLinkRecuperacao = async () => {
+    if (!usuarioLocal?.email) {
+      setMensagem({ tipo: 'error', texto: 'Email do usuário não encontrado' })
+      return
+    }
+
     setEnviando(true)
     setMensagem(null)
+
+    console.log('📧 Enviando link de recuperação para:', usuarioLocal.email)
 
     try {
       const response = await fetch('/api/admin/reset-password', {
@@ -71,59 +108,155 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email: usuario.email }),
+        body: JSON.stringify({ email: usuarioLocal.email }),
       })
 
       const data = await response.json()
+      console.log('📥 Resposta da API:', { status: response.status, data })
 
       if (!response.ok) {
-        setMensagem({ tipo: 'error', texto: data.error || 'Erro ao enviar link de recuperação' })
+        console.error('❌ Erro ao enviar link:', data.error)
+        console.error('   Detalhes:', data.details)
+        console.error('   Sugestão:', data.suggestion)
+        
+        let mensagemErro = data.error || 'Erro ao enviar link de recuperação.'
+        
+        // Adicionar sugestões úteis baseadas no erro
+        if (data.suggestion) {
+          mensagemErro += ` ${data.suggestion}`
+        } else if (data.error?.includes('rate limit')) {
+          mensagemErro += ' Aguarde alguns minutos e tente novamente.'
+        } else if (data.error?.includes('SMTP') || data.error?.includes('smtp')) {
+          mensagemErro += ' Verifique se o SMTP está configurado corretamente no Supabase.'
+        } else if (data.error?.includes('not found')) {
+          mensagemErro += ' Verifique se o email está correto.'
+        }
+        
+        setMensagem({ 
+          tipo: 'error', 
+          texto: mensagemErro
+        })
       } else {
-        setMensagem({ tipo: 'success', texto: 'Link de recuperação de senha enviado com sucesso!' })
+        console.log('✅ Link enviado com sucesso')
+        let mensagemSucesso = `Link de recuperação de senha enviado com sucesso para ${usuarioLocal.email}!`
+        if (data.note) {
+          mensagemSucesso += ` ${data.note}`
+        } else {
+          mensagemSucesso += ' Verifique a caixa de entrada e spam.'
+        }
+        
+        setMensagem({ 
+          tipo: 'success', 
+          texto: mensagemSucesso
+        })
       }
     } catch (error: any) {
-      setMensagem({ tipo: 'error', texto: 'Erro ao conectar com o servidor' })
+      console.error('❌ Erro ao conectar com o servidor:', error)
+      setMensagem({ 
+        tipo: 'error', 
+        texto: `Erro ao conectar com o servidor: ${error.message || 'Erro desconhecido'}` 
+      })
     } finally {
       setEnviando(false)
     }
   }
 
   const handleAlterarPlano = async () => {
-    if (!usuario) return
+    if (!usuarioLocal) {
+      console.error('❌ [ALTERAR PLANO] Usuário não encontrado')
+      return
+    }
+
+    // Validações
+    if (novoPlano === usuarioLocal.plano) {
+      console.warn('⚠️ [ALTERAR PLANO] Plano não foi alterado (mesmo plano)')
+      setMensagem({ tipo: 'error', texto: 'Selecione um plano diferente do atual' })
+      return
+    }
+
+    console.log('🔄 [ALTERAR PLANO] Iniciando alteração de plano...')
+    console.log('📋 [ALTERAR PLANO] Dados:', {
+      userId: usuarioLocal.id,
+      planoAtual: usuarioLocal.plano,
+      novoPlano: novoPlano,
+      novoStatus: novoStatus,
+      usuarioEmail: usuarioLocal.email
+    })
 
     setAlterandoPlano(true)
     setMensagem(null)
 
     try {
+      // Ajustar status baseado no plano selecionado
+      let statusEnviar = novoStatus
+      if (novoPlano === 'teste') {
+        statusEnviar = 'trial'
+      } else if (!statusEnviar || statusEnviar === 'trial') {
+        // Se for plano pago e não tiver status, usar 'ativo'
+        statusEnviar = 'ativo'
+      }
+
+      const requestBody = {
+        userId: usuarioLocal.id,
+        plano: novoPlano,
+        planoStatus: statusEnviar,
+      }
+
+      console.log('📤 [ALTERAR PLANO] Enviando requisição:', requestBody)
+
       const response = await fetch('/api/admin/alterar-plano', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          userId: usuario.id,
-          plano: novoPlano,
-          planoStatus: novoStatus,
-        }),
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log('📥 [ALTERAR PLANO] Resposta recebida:', {
+        status: response.status,
+        statusText: response.statusText,
+        ok: response.ok
       })
 
       const data = await response.json()
+      console.log('📥 [ALTERAR PLANO] Dados da resposta:', data)
 
       if (!response.ok) {
-        setMensagem({ tipo: 'error', texto: data.error || 'Erro ao alterar plano' })
+        console.error('❌ [ALTERAR PLANO] Erro na resposta:', data)
+        const errorMessage = data.error || 'Erro ao alterar plano'
+        setMensagem({ tipo: 'error', texto: errorMessage })
       } else {
-        setMensagem({ tipo: 'success', texto: `Plano alterado para ${planoLabels[novoPlano]} com sucesso!` })
-        // Atualizar plano local
-        usuario.plano = novoPlano
+        console.log('✅ [ALTERAR PLANO] Plano alterado com sucesso!')
+        console.log('✅ [ALTERAR PLANO] Dados atualizados:', data.usuario)
+        
+        // Atualizar plano do usuário localmente no estado
+        setUsuarioLocal(prev => prev ? { ...prev, plano: novoPlano } : null)
+        
+        // Chamar callback para atualizar lista no componente pai
+        if (onPlanoAlterado && usuarioLocal) {
+          onPlanoAlterado(usuarioLocal.id, novoPlano)
+        }
+        
+        setMensagem({ 
+          tipo: 'success', 
+          texto: `Plano alterado para ${planoLabels[novoPlano]} com sucesso!` 
+        })
+        
         // Fechar modal de alteração
         setMostrarAlterarPlano(false)
-        // Recarregar página após 1 segundo
+        
+        // Fechar mensagem após 3 segundos
         setTimeout(() => {
-          window.location.reload()
-        }, 1500)
+          setMensagem(null)
+        }, 3000)
       }
     } catch (error: any) {
-      setMensagem({ tipo: 'error', texto: 'Erro ao conectar com o servidor' })
+      console.error('❌ [ALTERAR PLANO] Erro inesperado:', error)
+      console.error('❌ [ALTERAR PLANO] Stack:', error.stack)
+      setMensagem({ 
+        tipo: 'error', 
+        texto: `Erro ao conectar com o servidor: ${error.message || 'Erro desconhecido'}` 
+      })
     } finally {
       setAlterandoPlano(false)
     }
@@ -185,7 +318,7 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                     Usuário Inativo
                   </h4>
                   <p className="text-sm text-orange-700 dark:text-orange-400">
-                    {usuario.last_sign_in_at 
+                    {usuarioLocal?.last_sign_in_at 
                       ? `Este usuário não faz login há ${diasInativo} ${diasInativo === 1 ? 'dia' : 'dias'}.`
                       : `Este usuário nunca fez login. Cadastrado há ${diasInativo} ${diasInativo === 1 ? 'dia' : 'dias'}.`
                     }
@@ -203,10 +336,10 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">ID Admin</label>
               </div>
               <p className="text-sm font-mono text-brand-midnight dark:text-brand-clean font-semibold">
-                #{usuario.id_curto || usuario.id.substring(0, 5)}
+                #{usuarioLocal?.id_curto || usuarioLocal?.id.substring(0, 5)}
               </p>
               <p className="text-xs font-mono text-brand-midnight/50 dark:text-brand-clean/50 break-all mt-1">
-                UUID: {usuario.id}
+                UUID: {usuarioLocal?.id}
               </p>
             </div>
 
@@ -216,7 +349,7 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <User size={16} className="text-brand-aqua" />
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">Nome Completo</label>
               </div>
-              <p className="text-sm font-medium text-brand-midnight dark:text-brand-clean">{usuario.nome}</p>
+              <p className="text-sm font-medium text-brand-midnight dark:text-brand-clean">{usuarioLocal?.nome}</p>
             </div>
 
             {/* Email */}
@@ -225,7 +358,7 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <Mail size={16} className="text-brand-aqua" />
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">Email</label>
               </div>
-              <p className="text-sm text-brand-midnight dark:text-brand-clean">{usuario.email}</p>
+              <p className="text-sm text-brand-midnight dark:text-brand-clean">{usuarioLocal?.email}</p>
             </div>
 
             {/* Contatos */}
@@ -235,19 +368,19 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">Contatos</label>
               </div>
               <div className="space-y-1.5">
-                {usuario.telefone && (
+                {usuarioLocal?.telefone && (
                   <div className="flex items-center gap-2 text-xs text-brand-midnight dark:text-brand-clean/80">
                     <Phone size={12} className="text-brand-midnight/60 dark:text-brand-clean/60" />
-                    <span>Telefone: {usuario.telefone}</span>
+                    <span>Telefone: {usuarioLocal.telefone}</span>
                   </div>
                 )}
-                {usuario.whatsapp && (
+                {usuarioLocal?.whatsapp && (
                   <div className="flex items-center gap-2 text-xs text-brand-midnight dark:text-brand-clean/80">
                     <Phone size={12} className="text-brand-midnight/60 dark:text-brand-clean/60" />
-                    <span>WhatsApp: {usuario.whatsapp}</span>
+                    <span>WhatsApp: {usuarioLocal.whatsapp}</span>
                   </div>
                 )}
-                {!usuario.telefone && !usuario.whatsapp && (
+                {!usuarioLocal?.telefone && !usuarioLocal?.whatsapp && (
                   <span className="text-xs text-brand-midnight/40 dark:text-brand-clean/40">Nenhum contato cadastrado</span>
                 )}
               </div>
@@ -262,8 +395,19 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 </div>
                 <button
                   onClick={() => {
-                    setNovoPlano(usuario.plano)
+                    console.log('🔧 [MODAL] Botão Alterar clicado')
+                    console.log('🔧 [MODAL] Plano atual do usuário:', usuarioLocal?.plano)
+                    // Resetar para o plano atual antes de abrir o modal
+                    setNovoPlano(usuarioLocal?.plano || 'teste')
+                    // Resetar status baseado no plano atual
+                    if (usuarioLocal?.plano === 'teste') {
+                      setNovoStatus('trial')
+                    } else {
+                      setNovoStatus('ativo')
+                    }
                     setMostrarAlterarPlano(!mostrarAlterarPlano)
+                    setMensagem(null) // Limpar mensagens anteriores
+                    console.log('🔧 [MODAL] Modal de alteração:', !mostrarAlterarPlano ? 'aberto' : 'fechado')
                   }}
                   className="px-2 py-1 bg-brand-aqua/20 text-brand-aqua rounded-lg hover:bg-brand-aqua/30 transition-smooth text-xs font-medium flex items-center gap-1"
                 >
@@ -271,8 +415,8 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                   Alterar
                 </button>
               </div>
-              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${planoColors[usuario.plano]}`}>
-                {planoLabels[usuario.plano]}
+              <span className={`inline-block px-2.5 py-1 rounded-full text-xs font-medium border ${planoColors[usuarioLocal?.plano || 'teste']}`}>
+                {planoLabels[usuarioLocal?.plano || 'teste']}
               </span>
 
               {/* Formulário de Alteração de Plano */}
@@ -288,8 +432,8 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                       className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/20 rounded-lg text-sm text-brand-midnight dark:text-brand-clean focus:outline-none focus:border-brand-aqua"
                     >
                       <option value="teste">Teste (Gratuito)</option>
-                      <option value="basico">Básico (R$ 39,00/mês)</option>
-                      <option value="premium">Premium (R$ 59,00/mês)</option>
+                      <option value="basico">Básico (R$ 29,90/mês)</option>
+                      <option value="premium">Premium (R$ 49,90/mês)</option>
                     </select>
                   </div>
 
@@ -313,8 +457,20 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
 
                   <div className="flex gap-2">
                     <button
-                      onClick={handleAlterarPlano}
-                      disabled={alterandoPlano || novoPlano === usuario.plano}
+                      onClick={(e) => {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        console.log('🔘 [BOTÃO] Botão clicado!')
+                        console.log('🔘 [BOTÃO] Estado:', {
+                          alterandoPlano,
+                          novoPlano,
+                          usuarioPlano: usuarioLocal?.plano,
+                          mesmoPlano: novoPlano === usuarioLocal?.plano,
+                          desabilitado: alterandoPlano || novoPlano === usuarioLocal?.plano
+                        })
+                        handleAlterarPlano()
+                      }}
+                      disabled={alterandoPlano || novoPlano === usuarioLocal?.plano}
                       className="flex-1 px-3 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth text-sm font-medium flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {alterandoPlano ? (
@@ -332,7 +488,7 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                     <button
                       onClick={() => {
                         setMostrarAlterarPlano(false)
-                        setNovoPlano(usuario.plano)
+                        setNovoPlano(usuarioLocal?.plano || 'teste')
                       }}
                       className="px-3 py-2 bg-gray-100 dark:bg-brand-royal text-brand-midnight dark:text-brand-clean rounded-lg hover:bg-gray-200 dark:hover:bg-white/10 transition-smooth text-sm font-medium"
                     >
@@ -350,7 +506,7 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">Cadastrado em</label>
               </div>
               <p className="text-sm text-brand-midnight dark:text-brand-clean">
-                {format(new Date(usuario.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
+                {usuarioLocal?.created_at && format(new Date(usuarioLocal.created_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })}
               </p>
             </div>
 
@@ -361,8 +517,8 @@ export default function ModalDetalhesUsuario({ usuario, onClose }: ModalDetalhes
                 <label className="text-xs font-medium text-brand-midnight dark:text-brand-clean/70">Último Login</label>
               </div>
               <p className="text-sm text-brand-midnight dark:text-brand-clean">
-                {usuario.last_sign_in_at 
-                  ? format(new Date(usuario.last_sign_in_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
+                {usuarioLocal?.last_sign_in_at 
+                  ? format(new Date(usuarioLocal.last_sign_in_at), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", { locale: ptBR })
                   : <span className="text-orange-600 dark:text-orange-400 font-medium">Nunca fez login</span>
                 }
               </p>

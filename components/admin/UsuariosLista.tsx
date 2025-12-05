@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { Search, Mail, Phone, Calendar, CreditCard, Key, Crown, Loader2 } from 'lucide-react'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
@@ -30,10 +30,30 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
   const [alterandoPlano, setAlterandoPlano] = useState<string | null>(null)
   const [menuAberto, setMenuAberto] = useState<string | null>(null)
   const [mensagem, setMensagem] = useState<{ tipo: 'success' | 'error'; texto: string } | null>(null)
+  const [usuarios, setUsuarios] = useState<Usuario[]>(usuariosIniciais)
+
+  // Atualizar usuários quando usuariosIniciais mudar
+  useEffect(() => {
+    setUsuarios(usuariosIniciais)
+  }, [usuariosIniciais])
+
+  // Função para atualizar o plano de um usuário
+  const handlePlanoAlterado = (usuarioId: string, novoPlano: 'teste' | 'basico' | 'premium') => {
+    setUsuarios(prevUsuarios => 
+      prevUsuarios.map(usuario => 
+        usuario.id === usuarioId ? { ...usuario, plano: novoPlano } : usuario
+      )
+    )
+    
+    // Atualizar usuário selecionado também
+    if (usuarioSelecionado && usuarioSelecionado.id === usuarioId) {
+      setUsuarioSelecionado({ ...usuarioSelecionado, plano: novoPlano })
+    }
+  }
 
   // Filtrar usuários
   const usuariosFiltrados = useMemo(() => {
-    return usuariosIniciais.filter(usuario => {
+    return usuarios.filter(usuario => {
       const matchSearch = 
         usuario.nome.toLowerCase().includes(searchTerm.toLowerCase()) ||
         usuario.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -44,7 +64,7 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
       
       return matchSearch && matchPlano
     })
-  }, [usuariosIniciais, searchTerm, filterPlano])
+  }, [usuarios, searchTerm, filterPlano])
 
   const planoColors = {
     teste: 'bg-orange-900/30 text-orange-400 border-orange-800/50',
@@ -84,10 +104,10 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
         setTimeout(() => setMensagem(null), 5000)
       } else {
         setMensagem({ tipo: 'success', texto: `Plano de ${usuario.nome} alterado para ${planoLabels[novoPlano]}!` })
+        handlePlanoAlterado(usuario.id, novoPlano)
         setTimeout(() => {
           setMensagem(null)
-          window.location.reload()
-        }, 1500)
+        }, 3000)
       }
     } catch (error: any) {
       setMensagem({ tipo: 'error', texto: 'Erro ao conectar com o servidor' })
@@ -135,7 +155,7 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
           </select>
         </div>
         <div className="mt-4 text-sm text-brand-clean/70">
-          Mostrando {usuariosFiltrados.length} de {usuariosIniciais.length} usuários
+          Mostrando {usuariosFiltrados.length} de {usuarios.length} usuários
         </div>
       </div>
 
@@ -153,7 +173,7 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
 
       {/* Lista de usuários */}
       <div className="bg-brand-royal rounded-2xl shadow-lg border border-white/10 overflow-hidden">
-        {usuariosIniciais.length === 0 ? (
+        {usuarios.length === 0 ? (
           <div className="p-12 text-center">
             <p className="text-brand-clean/60 text-lg mb-2">
               {error ? 'Não foi possível carregar os usuários' : 'Nenhum usuário cadastrado ainda'}
@@ -365,6 +385,7 @@ export default function UsuariosLista({ usuarios: usuariosIniciais, error }: Usu
         <ModalDetalhesUsuario
           usuario={usuarioSelecionado}
           onClose={() => setUsuarioSelecionado(null)}
+          onPlanoAlterado={handlePlanoAlterado}
         />
       )}
     </div>
