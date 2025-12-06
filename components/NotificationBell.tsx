@@ -252,12 +252,9 @@ export default function NotificationBell() {
         <div className="relative">
           <Bell size={24} strokeWidth={2.5} className="relative z-10 transition-transform duration-300 group-hover:rotate-12" />
           {unreadCount > 0 && (
-            <>
-              <div className="absolute inset-0 bg-brand-aqua/20 rounded-full blur-lg animate-pulse"></div>
-              <span className="absolute -top-1 -right-1 bg-gradient-to-br from-brand-aqua to-brand-aqua/80 text-white dark:text-brand-midnight text-[11px] font-black rounded-full min-w-[22px] h-[22px] flex items-center justify-center shadow-lg ring-2 ring-white dark:ring-brand-midnight animate-bounce-subtle z-20">
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            </>
+            <span className="absolute top-0 right-0 translate-x-1/2 -translate-y-1/2 bg-brand-aqua text-white text-xs font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center shadow-md ring-2 ring-white dark:ring-brand-midnight z-20 px-1.5">
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
           )}
         </div>
       </button>
