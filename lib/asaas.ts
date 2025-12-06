@@ -3,12 +3,14 @@
 
 const ASAAS_API_URL = process.env.ASAAS_API_URL || 'https://sandbox.asaas.com/api/v3'
 
-// IMPORTANTE: Next.js pode não carregar variáveis que começam com $ do .env.local
-// Vamos tentar ler diretamente do arquivo como fallback
+// IMPORTANTE: No Vercel, as variáveis vêm de process.env (não de .env.local)
+// Vamos ler apenas de process.env para evitar erros durante o build
 function getAsaasApiKey(): string {
   let apiKey = process.env.ASAAS_API_KEY
 
-  if (!apiKey) {
+  // No ambiente de produção (Vercel), não tentar ler .env.local
+  // pois ele não existe lá - as variáveis estão em process.env
+  if (!apiKey && process.env.NODE_ENV !== 'production') {
     try {
       const fs = require('fs')
       const path = require('path')
@@ -20,18 +22,31 @@ function getAsaasApiKey(): string {
         console.log('✅ [lib/asaas] API Key carregada diretamente do arquivo .env.local')
       }
     } catch (fileError: any) {
-      console.error('❌ [lib/asaas] Erro ao ler .env.local:', fileError.message)
+      // Ignorar erro no build - em produção as variáveis vêm de process.env
+      if (process.env.NODE_ENV !== 'production') {
+        console.error('❌ [lib/asaas] Erro ao ler .env.local:', fileError.message)
+      }
     }
   }
 
-  if (!apiKey) {
-    throw new Error('ASAAS_API_KEY não está configurada. Verifique o arquivo .env.local')
-  }
-
-  return apiKey
+  // Não lançar erro durante o build - apenas retornar vazio
+  // O erro será lançado em runtime quando tentar usar
+  return apiKey || ''
 }
 
-const ASAAS_API_KEY = getAsaasApiKey()
+// Não executar no top-level durante o build
+// A função será chamada apenas quando necessário (runtime)
+let cachedApiKey: string | null = null
+
+function getAsaasApiKeyLazy(): string {
+  if (cachedApiKey === null) {
+    cachedApiKey = getAsaasApiKey()
+    if (!cachedApiKey) {
+      throw new Error('ASAAS_API_KEY não está configurada. Configure a variável de ambiente ASAAS_API_KEY no Vercel.')
+    }
+  }
+  return cachedApiKey
+}
 
 export interface AsaasCustomer {
   name: string
@@ -66,21 +81,23 @@ export interface AsaasResponse {
  * Criar um customer no Asaas
  */
 export async function criarCustomerAsaas(customer: AsaasCustomer): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   console.log('📝 [lib/asaas] Criando customer no Asaas:', {
     name: customer.name,
     email: customer.email,
     hasCpf: !!customer.cpfCnpj,
     cpfLength: customer.cpfCnpj?.length || 0,
     apiUrl: ASAAS_API_URL,
-    apiKeyLength: ASAAS_API_KEY.length,
-    apiKeyPrefix: ASAAS_API_KEY.substring(0, 20) + '...',
+    apiKeyLength: apiKey.length,
+    apiKeyPrefix: apiKey.substring(0, 20) + '...',
   })
   
   const response = await fetch(`${ASAAS_API_URL}/customers`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
     body: JSON.stringify(customer),
   })
@@ -129,11 +146,13 @@ export async function criarCustomerAsaas(customer: AsaasCustomer): Promise<Asaas
  * Criar uma assinatura no Asaas
  */
 export async function criarAssinaturaAsaas(subscription: AsaasSubscription): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/subscriptions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
     body: JSON.stringify(subscription),
   })
@@ -174,9 +193,11 @@ export async function criarAssinaturaAsaas(subscription: AsaasSubscription): Pro
  * Buscar uma assinatura no Asaas
  */
 export async function buscarAssinaturaAsaas(subscriptionId: string): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/subscriptions/${subscriptionId}`, {
     headers: {
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
   })
 
@@ -191,10 +212,12 @@ export async function buscarAssinaturaAsaas(subscriptionId: string): Promise<Asa
  * Cancelar uma assinatura no Asaas
  */
 export async function cancelarAssinaturaAsaas(subscriptionId: string): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/subscriptions/${subscriptionId}`, {
     method: 'DELETE',
     headers: {
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
   })
 
@@ -209,9 +232,11 @@ export async function cancelarAssinaturaAsaas(subscriptionId: string): Promise<A
  * Buscar um customer no Asaas
  */
 export async function buscarCustomerAsaas(customerId: string): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/customers/${customerId}`, {
     headers: {
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
   })
 
@@ -226,11 +251,13 @@ export async function buscarCustomerAsaas(customerId: string): Promise<AsaasResp
  * Atualizar um customer no Asaas
  */
 export async function atualizarCustomerAsaas(customerId: string, customer: Partial<AsaasCustomer>): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/customers/${customerId}`, {
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
     body: JSON.stringify(customer),
   })
@@ -247,9 +274,11 @@ export async function atualizarCustomerAsaas(customerId: string, customer: Parti
  * Buscar pagamentos de uma assinatura no Asaas
  */
 export async function buscarPagamentosAssinatura(subscriptionId: string): Promise<any[]> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/subscriptions/${subscriptionId}/payments`, {
     headers: {
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
   })
 
@@ -265,9 +294,11 @@ export async function buscarPagamentosAssinatura(subscriptionId: string): Promis
  * Buscar um pagamento específico no Asaas
  */
 export async function buscarPagamentoAsaas(paymentId: string): Promise<AsaasResponse> {
+  const apiKey = getAsaasApiKeyLazy()
+  
   const response = await fetch(`${ASAAS_API_URL}/payments/${paymentId}`, {
     headers: {
-      'access_token': ASAAS_API_KEY,
+      'access_token': apiKey,
     },
   })
 
