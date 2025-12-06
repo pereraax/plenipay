@@ -43,7 +43,7 @@ export default function LandingPage() {
       <AnimatedBackground />
       
       {/* Header */}
-      <header className="container mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6 flex items-center justify-between relative z-20">
+      <header className="container mx-auto px-4 sm:px-5 lg:px-6 pt-6 pb-4 sm:pt-8 sm:pb-5 lg:pt-10 lg:pb-6 flex items-center justify-between relative z-20">
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Botão de Menu Mobile - Canto Esquerdo Superior - Só mostrar se autenticado */}
           {isAuthenticated && (
@@ -78,7 +78,7 @@ export default function LandingPage() {
       </header>
 
       {/* Hero Section */}
-      <section className="container mx-auto px-3 sm:px-4 lg:px-6 py-8 sm:py-12 md:py-16 lg:py-24 text-center relative z-20">
+      <section className="container mx-auto px-3 sm:px-4 lg:px-6 pt-4 pb-8 sm:pt-6 sm:pb-12 md:pt-8 md:pb-16 lg:pt-12 lg:pb-24 text-center relative z-20">
         <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 bg-brand-aqua/10 border border-brand-aqua/30 rounded-full mb-3 sm:mb-4 lg:mb-6 animate-pulse">
             <Sparkles size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-brand-aqua" />
