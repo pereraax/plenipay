@@ -41,20 +41,17 @@ export default function NotificationBell() {
         const viewportHeight = window.innerHeight
         
         if (isMobile) {
-          // MOBILE: usar fixed positioning com cálculos precisos
-          const popupWidth = Math.min(380, viewportWidth - 16)
-          const top = rect.bottom + 8
-          const buttonRightEdge = viewportWidth - rect.right
-          const right = Math.max(8, buttonRightEdge)
-          const calculatedRight = Math.min(right, viewportWidth - popupWidth - 8)
-          const finalWidth = Math.min(popupWidth, viewportWidth - calculatedRight - 8)
+          // MOBILE: centralizar no meio da tela
+          const popupWidth = Math.min(380, viewportWidth - 32)
+          const top = Math.max(80, (viewportHeight - 400) / 2) // Centralizar verticalmente
+          const left = (viewportWidth - popupWidth) / 2 // Centralizar horizontalmente
           const availableHeight = viewportHeight - top - 16
           const maxHeight = Math.max(200, Math.min(availableHeight, 600))
           
           setPopupPosition({
             top,
-            right: calculatedRight,
-            width: finalWidth,
+            right: viewportWidth - left - popupWidth, // Converter left para right
+            width: popupWidth,
             maxHeight
           })
         } else {
@@ -272,30 +269,29 @@ export default function NotificationBell() {
             onClick={() => setIsOpen(false)}
           />
           <div 
-            className={`${isMobile ? 'fixed' : 'absolute top-full right-0 mt-2'} bg-gradient-to-br from-white/98 via-white/95 to-gray-50/90 dark:from-brand-midnight/98 dark:via-brand-royal/95 dark:to-brand-midnight/90 backdrop-blur-2xl rounded-2xl shadow-2xl z-[9999] overflow-hidden flex flex-col pointer-events-auto border border-gray-200/30 dark:border-brand-aqua/20 ring-1 ring-black/5 dark:ring-white/10 ${isMobile ? 'w-[calc(100vw-1rem)] max-w-[calc(100vw-1rem)]' : 'w-[380px] max-w-[380px] max-h-[calc(100vh-10rem)]'}`}
+            className={`${isMobile ? 'fixed left-1/2 -translate-x-1/2' : 'absolute top-full right-0 mt-2'} bg-white/95 dark:bg-brand-midnight/98 backdrop-blur-xl rounded-3xl shadow-2xl z-[9999] overflow-hidden flex flex-col pointer-events-auto border border-gray-200/50 dark:border-brand-aqua/20 ring-1 ring-gray-200/30 dark:ring-white/10 ${isMobile ? '' : 'w-[380px] max-w-[380px] max-h-[calc(100vh-10rem)]'}`}
             style={isMobile ? {
               top: `${popupPosition.top}px`,
-              right: `${popupPosition.right}px`,
               width: `${popupPosition.width}px`,
               maxWidth: `${popupPosition.width}px`,
               maxHeight: `${popupPosition.maxHeight}px`
             } : {}}
           >
             {/* Header compacto */}
-            <div className="relative p-4 border-b border-gray-200/40 dark:border-brand-aqua/15 bg-gradient-to-r from-brand-aqua/8 via-purple-500/5 to-brand-aqua/8 dark:from-brand-midnight/90 dark:via-brand-royal/80 dark:to-brand-midnight/90 overflow-hidden">
+            <div className="relative p-4 border-b border-gray-200/50 dark:border-brand-aqua/15 bg-gradient-to-r from-brand-aqua/10 via-blue-50/30 to-brand-aqua/10 dark:from-brand-midnight/90 dark:via-brand-royal/80 dark:to-brand-midnight/90 overflow-hidden">
               <div className="relative flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <div className="relative">
-                    <div className="relative p-2 bg-gradient-to-br from-brand-aqua/20 to-brand-aqua/10 dark:from-brand-aqua/30 dark:to-brand-aqua/20 rounded-xl shadow-lg ring-1 ring-brand-aqua/20 dark:ring-brand-aqua/30">
+                    <div className="relative p-2.5 bg-gradient-to-br from-brand-aqua/25 to-blue-500/15 dark:from-brand-aqua/30 dark:to-brand-aqua/20 rounded-xl shadow-md ring-1 ring-brand-aqua/20 dark:ring-brand-aqua/30">
                       <Bell size={18} className="text-brand-aqua dark:text-brand-aqua" strokeWidth={2.5} />
                     </div>
                   </div>
                   <div>
-                    <h3 className="font-display font-bold text-base text-brand-midnight dark:text-brand-clean tracking-tight">
+                    <h3 className="font-display font-bold text-base text-gray-800 dark:text-brand-clean tracking-tight">
                       Notificações
                     </h3>
                     {unreadCount > 0 && (
-                      <p className="text-xs text-brand-midnight/60 dark:text-brand-clean/60 font-medium mt-0.5">
+                      <p className="text-xs text-gray-600 dark:text-brand-clean/60 font-medium mt-0.5">
                         {unreadCount} {unreadCount === 1 ? 'não lida' : 'não lidas'}
                       </p>
                     )}
@@ -313,18 +309,18 @@ export default function NotificationBell() {
             </div>
             
             {/* Lista de notificações compacta */}
-            <div className="overflow-y-auto flex-1 min-h-0 bg-gradient-to-b from-gray-50/30 via-white/20 to-gray-50/30 dark:from-brand-midnight/50 dark:via-brand-royal/30 dark:to-brand-midnight/50 custom-scrollbar">
+            <div className="overflow-y-auto flex-1 min-h-0 bg-white dark:bg-brand-midnight/50 custom-scrollbar">
               {notifications.length === 0 ? (
                 <div className="p-12 text-center">
                   <div className="relative inline-block mb-4">
-                    <div className="relative bg-gradient-to-br from-brand-aqua/10 to-purple-500/5 dark:from-brand-aqua/20 dark:to-purple-500/10 p-4 rounded-2xl">
-                      <Bell size={40} className="relative mx-auto text-brand-midnight/30 dark:text-brand-clean/30" />
+                    <div className="relative bg-gradient-to-br from-brand-aqua/15 to-blue-100/30 dark:from-brand-aqua/20 dark:to-purple-500/10 p-5 rounded-2xl shadow-sm">
+                      <Bell size={48} className="relative mx-auto text-brand-aqua/40 dark:text-brand-clean/30" strokeWidth={1.5} />
                     </div>
                   </div>
-                  <p className="text-brand-midnight/70 dark:text-brand-clean/70 text-sm font-bold mb-1">
+                  <p className="text-gray-700 dark:text-brand-clean/70 text-sm font-bold mb-1">
                     Nenhuma notificação
                   </p>
-                  <p className="text-brand-midnight/50 dark:text-brand-clean/50 text-xs">
+                  <p className="text-gray-500 dark:text-brand-clean/50 text-xs">
                     Você está em dia! ✨
                   </p>
                 </div>
