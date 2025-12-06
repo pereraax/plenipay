@@ -234,10 +234,10 @@ export default function UpgradePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen">
+      <main className="lg:ml-64 min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
         {/* Header Mobile */}
-        <div className="lg:hidden pt-4 pb-2 px-3 sm:px-4">
-          <div className="flex justify-center mb-2">
+        <div className="lg:hidden pt-6 pb-4 px-3 sm:px-4 bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
+          <div className="flex justify-center mb-3">
             <div className="w-40 sm:w-52">
               <Logo />
             </div>
