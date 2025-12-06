@@ -43,7 +43,7 @@ export default function LandingPage() {
       <AnimatedBackground />
       
       {/* Header */}
-      <header className="container mx-auto px-4 sm:px-5 lg:px-6 pt-6 pb-4 sm:pt-8 sm:pb-5 lg:pt-10 lg:pb-6 flex items-center justify-between relative z-20">
+      <header className="container mx-auto px-4 sm:px-5 lg:px-6 pt-8 pb-5 sm:pt-12 sm:pb-6 lg:pt-16 lg:pb-8 flex items-center justify-between relative z-20">
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Botão de Menu Mobile - Canto Esquerdo Superior - Só mostrar se autenticado */}
           {isAuthenticated && (
@@ -63,14 +63,14 @@ export default function LandingPage() {
         {isAuthenticated ? (
           <Link
             href="/home"
-            className="px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-brand-clean hover:text-brand-aqua transition-smooth font-medium whitespace-nowrap"
+            className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 lg:py-3 text-sm sm:text-base lg:text-lg font-semibold text-brand-aqua bg-brand-royal/30 backdrop-blur-sm border-2 border-brand-aqua/30 rounded-xl hover:bg-brand-royal/50 hover:border-brand-aqua/50 transition-all duration-300 whitespace-nowrap"
           >
             Dashboard
           </Link>
         ) : (
           <Link
             href="/login"
-            className="px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-brand-clean hover:text-brand-aqua transition-smooth font-medium whitespace-nowrap"
+            className="px-4 sm:px-5 lg:px-6 py-2 sm:py-2.5 lg:py-3 text-sm sm:text-base lg:text-lg font-semibold text-brand-aqua bg-brand-royal/30 backdrop-blur-sm border-2 border-brand-aqua/30 rounded-xl hover:bg-brand-royal/50 hover:border-brand-aqua/50 transition-all duration-300 whitespace-nowrap"
           >
             Entrar
           </Link>
