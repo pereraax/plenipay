@@ -236,7 +236,7 @@ export default function UpgradePage() {
       <Sidebar />
       <main className="lg:ml-64 min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
         {/* Header Mobile */}
-        <div className="lg:hidden pt-6 pb-4 px-3 sm:px-4 bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
+        <div className="lg:hidden pt-6 pb-2 px-3 sm:px-4 bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight border-none">
           <div className="flex justify-center mb-3">
             <div className="w-40 sm:w-52">
               <Logo />
@@ -251,7 +251,7 @@ export default function UpgradePage() {
         </div>
         
         {/* Hero Section */}
-        <section className="relative overflow-hidden pt-4 sm:pt-6 lg:pt-12 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-4 lg:px-8">
+        <section className="relative overflow-hidden pt-2 sm:pt-4 lg:pt-12 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-4 lg:px-8 -mt-2">
           <div className="absolute inset-0 bg-gradient-to-br from-brand-aqua/10 via-transparent to-brand-royal/20"></div>
           <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-8 sm:mb-10 lg:mb-12">
