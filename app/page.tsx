@@ -5,27 +5,52 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ArrowRight, Wallet, BarChart3, Calendar, CreditCard, Shield, Zap, Star, TrendingUp, PiggyBank, FileText, Hand, CheckCircle2, Smartphone, Globe, Lock, Sparkles } from 'lucide-react'
 import AnimatedBackground from '@/components/AnimatedBackground'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
+import { createClient } from '@/lib/supabase/client'
 
 export default function LandingPage() {
   const [isVisible, setIsVisible] = useState(false)
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
 
   useEffect(() => {
     setIsVisible(true)
+    
+    // Verificar autenticação
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        setIsAuthenticated(!!user)
+        
+        // Monitorar mudanças de autenticação
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+          setIsAuthenticated(!!session?.user)
+        })
+        
+        return () => {
+          subscription.unsubscribe()
+        }
+      } catch (error) {
+        setIsAuthenticated(false)
+      }
+    }
+    
+    checkAuth()
   }, [])
 
   return (
     <div className="min-h-screen relative overflow-hidden">
       <AnimatedBackground />
-      <MobileMenu />
       
       {/* Header */}
       <header className="container mx-auto px-3 sm:px-4 lg:px-6 py-3 sm:py-4 lg:py-6 flex items-center justify-between relative z-20">
         <div className="flex items-center gap-2 sm:gap-3">
-          {/* Botão de Menu Mobile - Canto Esquerdo Superior */}
-          <div className="lg:hidden">
-            <MenuButton className="!bg-brand-royal/50 !border-brand-aqua/20" />
-          </div>
+          {/* Botão de Menu Mobile - Canto Esquerdo Superior - Só mostrar se autenticado */}
+          {isAuthenticated && (
+            <div className="lg:hidden">
+              <MenuButton className="!bg-brand-royal/50 !border-brand-aqua/20" />
+            </div>
+          )}
           <Image 
             src="/logo.png" 
             alt="PLENIPAY" 
@@ -35,12 +60,21 @@ export default function LandingPage() {
             priority
           />
         </div>
-        <Link
-          href="/login"
-          className="px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-brand-clean hover:text-brand-aqua transition-smooth font-medium whitespace-nowrap"
-        >
-          Entrar
-        </Link>
+        {isAuthenticated ? (
+          <Link
+            href="/home"
+            className="px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-brand-clean hover:text-brand-aqua transition-smooth font-medium whitespace-nowrap"
+          >
+            Dashboard
+          </Link>
+        ) : (
+          <Link
+            href="/login"
+            className="px-3 sm:px-4 lg:px-6 py-1.5 sm:py-2 text-xs sm:text-sm lg:text-base text-brand-clean hover:text-brand-aqua transition-smooth font-medium whitespace-nowrap"
+          >
+            Entrar
+          </Link>
+        )}
       </header>
 
       {/* Hero Section */}

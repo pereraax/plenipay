@@ -61,15 +61,43 @@ export default function UserProfileMenu() {
     
     try {
       const supabase = createClient()
+      
+      // Limpar sessão completamente
       await supabase.auth.signOut()
       
-      // Usar window.location.href em vez de router.push para evitar loops
-      // e garantir que a página seja completamente recarregada
-      window.location.href = '/login'
+      // Limpar todos os cookies relacionados ao Supabase
+      const cookies = document.cookie.split(';')
+      cookies.forEach(cookie => {
+        const eqPos = cookie.indexOf('=')
+        const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim()
+        // Limpar cookies do Supabase
+        if (name.startsWith('sb-') || name.includes('supabase')) {
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`
+          document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/;domain=${window.location.hostname}`
+        }
+      })
+      
+      // Limpar localStorage relacionado ao Supabase
+      Object.keys(localStorage).forEach(key => {
+        if (key.startsWith('sb-') || key.includes('supabase')) {
+          localStorage.removeItem(key)
+        }
+      })
+      
+      // Limpar sessionStorage
+      sessionStorage.clear()
+      
+      // Aguardar um pouco para garantir que tudo foi limpo
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
+      // Redirecionar para página inicial (não login, para mostrar landing page)
+      window.location.href = '/'
     } catch (error) {
       console.error('Erro ao fazer logout:', error)
-      // Mesmo em caso de erro, redirecionar para login
-      window.location.href = '/login'
+      // Mesmo em caso de erro, limpar e redirecionar
+      localStorage.clear()
+      sessionStorage.clear()
+      window.location.href = '/'
     }
   }
 

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, createContext, useContext, ReactNode } from 'react'
+import { useState, createContext, useContext, ReactNode, useEffect } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { 
@@ -17,6 +17,7 @@ import {
   Crown
 } from 'lucide-react'
 import Logo from './Logo'
+import { createClient } from '@/lib/supabase/client'
 
 const menuItems = [
   { href: '/home', label: 'Home', icon: Home, color: 'text-blue-400' },
@@ -69,9 +70,49 @@ export function MenuButton({ className = '' }: { className?: string }) {
 export default function MobileMenu() {
   const { isOpen, setIsOpen } = useMenuContext()
   const pathname = usePathname()
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [isChecking, setIsChecking] = useState(true)
   
-  // Ocultar botão fixo em todas as páginas (botão estará ao lado do título em todas)
-  // Não renderizar o botão fixo, apenas o menu lateral
+  // Verificar autenticação
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const supabase = createClient()
+        const { data: { user } } = await supabase.auth.getUser()
+        setIsAuthenticated(!!user)
+      } catch (error) {
+        setIsAuthenticated(false)
+      } finally {
+        setIsChecking(false)
+      }
+    }
+
+    checkAuth()
+
+    // Monitorar mudanças de autenticação
+    const supabase = createClient()
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setIsAuthenticated(!!session?.user)
+    })
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [])
+
+  // Rotas públicas onde o menu não deve aparecer
+  const publicRoutes = ['/', '/login', '/cadastro', '/planos', '/termos', '/privacidade', '/suporte']
+  const isPublicRoute = pathname && publicRoutes.includes(pathname)
+  
+  // Não renderizar se estiver verificando, não autenticado em rota pública, ou em rota admin
+  if (isChecking || (!isAuthenticated && isPublicRoute) || pathname?.startsWith('/administracaosecr')) {
+    return null
+  }
+
+  // Se não estiver autenticado e não for rota pública, não mostrar menu
+  if (!isAuthenticated) {
+    return null
+  }
 
   return (
     <>
