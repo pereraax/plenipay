@@ -10,7 +10,8 @@ function getAsaasApiKey(): string {
 
   // No ambiente de produção (Vercel), não tentar ler .env.local
   // pois ele não existe lá - as variáveis estão em process.env
-  if (!apiKey && process.env.NODE_ENV !== 'production') {
+  const nodeEnv = process.env.NODE_ENV || ''
+  if (!apiKey && nodeEnv !== 'production') {
     try {
       const fs = require('fs')
       const path = require('path')
@@ -23,7 +24,9 @@ function getAsaasApiKey(): string {
       }
     } catch (fileError: any) {
       // Ignorar erro no build - em produção as variáveis vêm de process.env
-      if (process.env.NODE_ENV !== 'production') {
+      // Verificar NODE_ENV de forma segura para evitar erro de tipo
+      const nodeEnv = process.env.NODE_ENV || ''
+      if (nodeEnv !== 'production') {
         console.error('❌ [lib/asaas] Erro ao ler .env.local:', fileError.message)
       }
     }
