@@ -2,10 +2,34 @@
 
 import Image from 'next/image'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 export default function Logo() {
   const [imageError, setImageError] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
+
+  // Detectar modo escuro/claro
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+    }
+
+    // Verificar inicialmente
+    checkDarkMode()
+
+    // Observar mudanças no tema
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+
+    return () => observer.disconnect()
+  }, [])
+
+  // Escolher a imagem baseada no modo
+  const logoSrc = isDarkMode ? '/logo.png' : '/todo azul logo.png'
 
   if (imageError) {
     // Fallback: mostrar texto do logo se a imagem não carregar
@@ -21,7 +45,7 @@ export default function Logo() {
   return (
     <Link href="/home" className="flex items-center justify-center py-1 px-2 w-full cursor-pointer hover:opacity-80 transition-opacity">
       <Image 
-        src="/logo.png" 
+        src={logoSrc} 
         alt="PLENIPAY" 
         width={240}
         height={60}

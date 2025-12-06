@@ -234,44 +234,56 @@ export default function UpgradePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
-        {/* Header Mobile */}
-        <div className="lg:hidden pt-6 pb-0 px-3 sm:px-4 bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
-          <div className="flex justify-center mb-3">
-            <div className="w-40 sm:w-52">
-              <Logo />
+      <main className="lg:ml-64 min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight relative">
+        <div className="absolute inset-0 bg-gradient-to-br from-brand-aqua/10 via-transparent to-brand-royal/20 pointer-events-none"></div>
+        <div className="relative z-10">
+          {/* Header Mobile */}
+          <div className="lg:hidden pt-6 pb-6 px-3 sm:px-4">
+            <div className="flex justify-center mb-4">
+              <div className="w-40 sm:w-52">
+                <Logo />
+              </div>
+            </div>
+            <div className="flex items-center gap-3 px-3">
+              <MenuButton />
+              <h1 className="text-xl sm:text-2xl font-display font-bold text-white leading-none">
+                Upgrade de Plano
+              </h1>
             </div>
           </div>
-          <div className="flex items-center gap-3 px-3 pb-4">
-            <MenuButton />
-            <h1 className="text-xl sm:text-2xl font-display font-bold text-white leading-none">
-              Upgrade de Plano
-            </h1>
-          </div>
-        </div>
-        
-        {/* Hero Section */}
-        <section className="relative overflow-hidden pt-0 sm:pt-2 lg:pt-12 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-4 lg:px-8">
-          <div className="absolute inset-0 bg-gradient-to-br from-brand-aqua/10 via-transparent to-brand-royal/20"></div>
+          
+          {/* Hero Section */}
+          <section className="relative overflow-hidden pt-6 sm:pt-8 lg:pt-12 pb-12 sm:pb-16 lg:pb-20 px-3 sm:px-4 lg:px-8">
           <div className="max-w-7xl mx-auto relative z-10">
             <div className="text-center mb-8 sm:mb-10 lg:mb-12">
-              <div className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-aqua/20 rounded-full mb-4 sm:mb-5 lg:mb-6">
+              <div 
+                className="inline-flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-brand-aqua/20 rounded-full mb-6 sm:mb-7 lg:mb-8"
+                tabIndex={-1}
+                style={{
+                  outline: 'none',
+                  boxShadow: 'none',
+                  WebkitTapHighlightColor: 'transparent',
+                  userSelect: 'none',
+                  pointerEvents: 'none'
+                }}
+                onFocus={(e) => e.target.blur()}
+              >
                 <Sparkles className="text-brand-aqua" size={16} style={{ width: '16px', height: '16px' }} />
                 <span className="text-brand-aqua font-semibold text-xs sm:text-sm lg:text-base">Transforme sua vida financeira hoje</span>
               </div>
               
-              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-white mb-4 sm:mb-5 lg:mb-6 leading-tight px-2">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl font-display font-bold text-white mb-6 sm:mb-7 lg:mb-8 leading-tight px-2">
                 Pare de Gastar Sem Controle.
                 <br />
                 <span className="text-brand-aqua">Comece a Viver Seus Sonhos.</span>
               </h1>
               
-              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-brand-clean/80 max-w-3xl mx-auto mb-6 sm:mb-7 lg:mb-8 leading-relaxed px-3">
+              <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-brand-clean/80 max-w-3xl mx-auto mb-8 sm:mb-10 lg:mb-12 leading-relaxed px-3">
                 Você já tentou economizar sozinho e não conseguiu? <strong className="text-white">Não é culpa sua.</strong> 
                 Você só precisa das ferramentas certas. Milhares de pessoas já transformaram suas finanças com o PLENIPAY.
               </p>
 
-              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-brand-clean/70 mb-6 sm:mb-7 lg:mb-8 px-3">
+              <div className="flex flex-col sm:flex-row flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-6 text-xs sm:text-sm text-brand-clean/70 mb-8 sm:mb-10 lg:mb-12 px-3">
                 <div className="flex items-center gap-2">
                   <Check className="text-green-400" size={16} style={{ width: '16px', height: '16px' }} />
                   <span>7 dias grátis para testar</span>
@@ -447,6 +459,7 @@ export default function UpgradePage() {
             </div>
           </div>
         </section>
+        </div>
       </main>
 
       {/* Botão Flutuante WhatsApp */}
