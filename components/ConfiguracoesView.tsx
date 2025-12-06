@@ -708,7 +708,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                       Informações do Perfil
                     </h2>
                     
-                    <div className="bg-brand-clean dark:bg-brand-royal/30 rounded-xl p-6 space-y-5 border border-brand-aqua/20">
+                    <div className="bg-white dark:bg-brand-royal/30 rounded-xl p-6 space-y-5 border border-gray-200 dark:border-brand-aqua/20 shadow-sm">
                       {/* Avatar e Nome */}
                       <div className="flex items-center gap-4 pb-4 border-b border-brand-midnight/10 dark:border-white/10">
                         <div className="w-16 h-16 rounded-full bg-brand-aqua/20 flex items-center justify-center">
