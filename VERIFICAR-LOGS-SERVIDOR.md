@@ -127,3 +127,4 @@ Se você não reiniciou, a API key não será carregada e o erro continuará apa
 
 **Reinicie o servidor AGORA e me envie os logs!** 🚀
 
+

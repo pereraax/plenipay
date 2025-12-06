@@ -148,3 +148,4 @@ Se precisar voltar para OTP:
 
 **✅ Implementação completa! O sistema agora usa links de confirmação em vez de códigos OTP.**
 
+

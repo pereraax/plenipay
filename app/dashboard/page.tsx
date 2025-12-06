@@ -1,5 +1,5 @@
 import Sidebar from '@/components/Sidebar'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
 import DashboardView from '@/components/DashboardView'
 import NotificationBell from '@/components/NotificationBell'
 import UserProfileMenu from '@/components/UserProfileMenu'
@@ -36,7 +36,6 @@ export default async function DashboardPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 p-3 sm:p-4 lg:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">

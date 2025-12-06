@@ -116,3 +116,4 @@ O código está sendo enviado com sucesso (sem erros), mas o email não está ch
 
 **O problema mais comum é o template usando `{{ .ConfirmationURL }}` ao invés de `{{ .Token }}`!**
 
+

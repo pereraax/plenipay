@@ -86,3 +86,4 @@
 **Status:** ✅ Concluído
 **Arquivo modificado:** `components/BannerInformacoes.tsx`
 
+

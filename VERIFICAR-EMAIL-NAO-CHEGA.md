@@ -165,3 +165,4 @@ Isso vai testar se o envio está funcionando e mostrar erros específicos.
 
 O código está correto - o problema é de configuração do Supabase ou SMTP.
 
+

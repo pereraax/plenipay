@@ -8,7 +8,7 @@ import AnimatedBackground from '@/components/AnimatedBackground'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/components/NotificationBell'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
 import Logo from '@/components/Logo'
 
 const planos = [
@@ -233,7 +233,6 @@ export default function UpgradePage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 min-h-screen">
         {/* Header Mobile */}

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu from '@/components/MobileMenu'
 import { PlayCircle, Clock, Eye, Search, Filter } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 
@@ -77,7 +76,6 @@ export default function TutoriaisPage() {
 
   return (
     <div className="min-h-screen bg-brand-clean dark:bg-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 p-4 lg:p-8 dark:bg-brand-midnight">
         <div className="max-w-7xl mx-auto">

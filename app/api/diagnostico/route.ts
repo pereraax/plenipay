@@ -139,3 +139,4 @@ export async function GET() {
   return NextResponse.json(diagnosticos, { status: 200 })
 }
 
+

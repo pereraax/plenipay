@@ -162,3 +162,4 @@ O email **DEVE SER ENVIADO** e você **DEVE RECEBER** no seu email!
 
 **🎯 Prioridade: Configure o SMTP no Supabase! Sem isso, o email não será enviado.**
 
+

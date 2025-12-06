@@ -68,3 +68,4 @@ O email pode não chegar por problemas de configuração do Supabase:
 
 **Se o modal não aparecer ou o email não chegar, verifique as configurações do Supabase acima!**
 
+

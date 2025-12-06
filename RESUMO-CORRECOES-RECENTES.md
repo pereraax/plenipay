@@ -44,3 +44,4 @@ git checkout HEAD -- app/home/page.tsx components/SupportPanel.tsx components/Av
 - `app/administracaosecr/dashboard/page.tsx`
 - `app/layout.tsx`
 
+

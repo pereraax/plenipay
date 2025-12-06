@@ -174,3 +174,4 @@ Se o email ainda não chegar após essas correções, o problema é de **configu
 
 **O código agora está correto. Se não funcionar, é problema de configuração do Supabase (SMTP/template).**
 
+

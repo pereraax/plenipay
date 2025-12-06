@@ -181,3 +181,4 @@ O email **DEVE SER ENVIADO** e você **DEVE RECEBER** no seu email!
 
 Sem SMTP configurado, nenhum email será enviado, independente do código estar correto ou não.
 
+

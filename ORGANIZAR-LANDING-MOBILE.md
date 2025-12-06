@@ -37,3 +37,4 @@ Se precisar de mais ajustes, considere:
 3. Otimizar imagens e gráficos para mobile
 4. Melhorar espaçamento entre seções
 
+

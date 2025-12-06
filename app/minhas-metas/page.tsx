@@ -1,6 +1,6 @@
 import { Suspense } from 'react'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
 import PlanoGuard from '@/components/PlanoGuard'
 import NotificationBell from '@/components/NotificationBell'
 import UserProfileMenu from '@/components/UserProfileMenu'
@@ -37,7 +37,6 @@ async function MinhasMetasContent() {
 export default function MinhasMetasPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight dark:from-brand-midnight dark:via-brand-midnight dark:to-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 p-3 sm:p-4 md:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">

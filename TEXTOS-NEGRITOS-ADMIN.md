@@ -86,3 +86,4 @@ Todos os textos do painel admin agora estão mais destacados e legíveis:
 **Data da alteração:** 2025-12-01
 **Status:** ✅ Concluído
 
+

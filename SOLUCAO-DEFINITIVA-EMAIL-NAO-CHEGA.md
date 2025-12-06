@@ -96,3 +96,4 @@ Seu código de confirmação é: {{ .Token }}
 
 **99% das vezes o problema é o template usando ConfirmationURL!**
 
+

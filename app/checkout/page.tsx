@@ -6,7 +6,6 @@ import { Check, ArrowLeft, Loader2, Smartphone, Receipt, CreditCard, X } from 'l
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/components/NotificationBell'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu from '@/components/MobileMenu'
 
 export default function CheckoutPage() {
   const router = useRouter()
@@ -258,7 +257,6 @@ export default function CheckoutPage() {
   if (loadingProfile) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
-        <MobileMenu />
         <Sidebar />
         <main className="lg:ml-64 min-h-screen flex items-center justify-center">
           <Loader2 className="animate-spin text-brand-aqua" size={48} />

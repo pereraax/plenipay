@@ -109,3 +109,4 @@ ASAAS_API_KEY="$aact_prod_..."
 
 **⚠️ LEMBRE-SE: Sempre que alterar o `.env.local`, você DEVE reiniciar o servidor!**
 
+

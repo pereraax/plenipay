@@ -90,3 +90,4 @@ Após reiniciar, aguarde **30 segundos** para o servidor compilar completamente 
 
 **✅ FAÇA O HARD REFRESH AGORA: Ctrl+Shift+R (ou Cmd+Shift+R no Mac)**
 
+

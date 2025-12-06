@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { Check, Copy, ArrowLeft, Loader2, QrCode, Smartphone, Clock, RefreshCw } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu from '@/components/MobileMenu'
 import { createNotification } from '@/components/NotificationBell'
 import ModalBoasVindas from '@/components/ModalBoasVindas'
 
@@ -166,7 +165,6 @@ export default function PagamentoPixPage() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
-        <MobileMenu />
         <Sidebar />
         <main className="lg:ml-64 min-h-screen flex items-center justify-center">
           <div className="text-center">

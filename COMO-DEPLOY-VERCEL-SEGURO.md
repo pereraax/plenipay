@@ -88,3 +88,4 @@ Se o build local falhar, o deploy no Vercel também vai falhar.
 
 **✅ Use o script `deploy-vercel-seguro.sh` para evitar problemas!**
 
+

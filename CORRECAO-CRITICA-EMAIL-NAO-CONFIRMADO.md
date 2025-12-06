@@ -130,3 +130,4 @@ Se você ainda não desabilitou a obrigatoriedade no Supabase:
 
 
 
+

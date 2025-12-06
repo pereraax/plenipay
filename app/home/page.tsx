@@ -1,5 +1,5 @@
 import Sidebar from '@/components/Sidebar'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
 import DashboardHorizontalWrapper from '@/components/DashboardHorizontalWrapper'
 import QuickActionCard from '@/components/QuickActionCard'
 import SupportPanel from '@/components/SupportPanel'
@@ -20,7 +20,6 @@ export const revalidate = 60
 export default async function HomePage() {
   return (
     <div className="min-h-screen bg-brand-clean dark:bg-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 p-3 sm:p-4 lg:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">

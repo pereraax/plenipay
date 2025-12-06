@@ -101,3 +101,4 @@ O componente `PlenAssistant.tsx` agora:
    - Botão "Assinar Plano" aparece abaixo da mensagem
    - Ao clicar, redireciona para `/configuracoes?tab=perfil`
 
+

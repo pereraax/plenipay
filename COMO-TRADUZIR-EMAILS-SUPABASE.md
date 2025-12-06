@@ -153,3 +153,4 @@ No Supabase, os templates aparecem com nomes em inglês:
 
 **Comece pelo "Reset Password" que é o mais importante!** 🚀
 
+

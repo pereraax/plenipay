@@ -88,3 +88,4 @@ A função `constrainPosition` calcula os limites:
 **Status:** ✅ Concluído
 **Arquivo modificado:** `components/admin/ImageEditor.tsx`
 
+

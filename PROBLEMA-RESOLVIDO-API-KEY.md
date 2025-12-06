@@ -80,3 +80,4 @@ ASAAS_API_KEY='$aact_prod_...'
 
 **Reinicie o servidor AGORA e teste!** 🎯
 
+

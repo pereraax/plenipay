@@ -78,3 +78,4 @@ O usuário clicou no link de confirmação do email, foi redirecionado para a p�
 - ✅ Estado é atualizado corretamente após login
 - ✅ Usuário pode usar todas as funcionalidades normalmente
 
+

@@ -255,3 +255,4 @@ Após adicionar os registros:
 
 **Comece adicionando o SPF primeiro (mais fácil e importante)!** 🚀
 
+

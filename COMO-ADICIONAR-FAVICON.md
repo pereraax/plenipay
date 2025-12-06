@@ -129,3 +129,4 @@ export const metadata: Metadata = {
    - O Next.js detectará automaticamente
 3. **Teste:** Recarregue a página e verifique a aba do navegador
 
+

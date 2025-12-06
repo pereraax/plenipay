@@ -84,3 +84,4 @@ Todos os componentes agora verificam corretamente se o email está confirmado:
 - ✅ Funcionalidades ficam disponíveis após confirmação
 - ✅ Estado é atualizado automaticamente após confirmação
 
+

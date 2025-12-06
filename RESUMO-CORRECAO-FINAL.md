@@ -51,3 +51,4 @@ O problema é de **configuração do Supabase**, não do código:
 
 **O código está correto - verifique as configurações do Supabase!**
 
+

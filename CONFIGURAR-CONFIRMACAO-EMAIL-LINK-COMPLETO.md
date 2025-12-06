@@ -142,3 +142,4 @@ Antes de testar, verifique:
 
 **Comece configurando o tipo para "Email Link" no Supabase!** 🚀
 
+

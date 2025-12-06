@@ -144,3 +144,4 @@ Para isso funcionar, você precisa ter no Supabase:
 
 **Agora funciona perfeitamente com o fluxo natural do Supabase!**
 
+

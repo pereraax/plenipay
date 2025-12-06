@@ -92,3 +92,4 @@ Se o Supabase continuar não enviando, podemos:
 
 **Se mesmo testando manualmente no Dashboard não enviar, o problema é de configuração do Supabase, não do código!**
 
+

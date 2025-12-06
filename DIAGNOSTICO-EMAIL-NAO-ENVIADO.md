@@ -167,3 +167,4 @@ Se todas as verificações falharem, forneça:
 4. **Teste novamente** após fazer correções
 5. **Se ainda não funcionar**, compartilhe os logs de erro completos
 
+

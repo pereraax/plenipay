@@ -162,3 +162,4 @@ O problema **NÃO é com o banco de dados**, mas sim com o **processamento do lo
 **Servidor:** http://localhost:3000
 **Status do Banco:** ✅ Funcionando
 
+

@@ -95,3 +95,4 @@ Isso vai contornar qualquer problema do Supabase e garantir envio real.
 
 **Com essas informações, vou criar a solução certa!**
 
+

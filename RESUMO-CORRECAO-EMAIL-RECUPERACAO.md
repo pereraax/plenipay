@@ -115,3 +115,4 @@ Isso vai ajudar a identificar exatamente qual é o problema!
 - `IMPORTANTE-SENHA-SMTP.md` - Verificar credenciais SMTP
 - `TESTAR-SMTP.md` - Como testar se SMTP está funcionando
 
+

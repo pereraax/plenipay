@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import Sidebar from '@/components/Sidebar'
-import MobileMenu, { MenuButton } from '@/components/MobileMenu'
+import { MenuButton } from '@/components/MobileMenu'
 import DividasLista from '@/components/DividasLista'
 import PlanoGuard from '@/components/PlanoGuard'
 import NotificationBell from '@/components/NotificationBell'
@@ -45,7 +45,6 @@ export default function DividasPage() {
 
   return (
     <div className="min-h-screen bg-brand-clean dark:bg-brand-midnight">
-      <MobileMenu />
       <Sidebar />
       <main className="lg:ml-64 p-3 sm:p-4 lg:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">

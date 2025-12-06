@@ -100,3 +100,4 @@ SELECT COUNT(*) as total_usuarios FROM get_all_profiles();
 
 
 
+
