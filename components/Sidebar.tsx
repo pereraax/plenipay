@@ -17,14 +17,14 @@ import {
 import Logo from './Logo'
 
 const menuItems = [
-  { href: '/home', label: 'Home', icon: Home, color: 'text-blue-400' },
-  { href: '/registros', label: 'Todos os Registros', icon: FileText, color: 'text-green-400' },
-  { href: '/dividas', label: 'Dívidas', icon: CreditCard, color: 'text-red-400' },
-  { href: '/minhas-metas', label: 'Minhas Metas', icon: PiggyBank, color: 'text-yellow-400' },
-  { href: '/calendario', label: 'Calendário', icon: Calendar, color: 'text-purple-400' },
-  { href: '/dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-cyan-400' },
-  { href: '/tutoriais', label: 'Tutoriais', icon: PlayCircle, color: 'text-pink-400' },
-  { href: '/configuracoes', label: 'Configurações', icon: Settings, color: 'text-gray-400' },
+  { href: '/home', label: 'Home', icon: Home, color: 'text-blue-600 dark:text-blue-400' },
+  { href: '/registros', label: 'Todos os Registros', icon: FileText, color: 'text-green-600 dark:text-green-400' },
+  { href: '/dividas', label: 'Dívidas', icon: CreditCard, color: 'text-red-600 dark:text-red-400' },
+  { href: '/minhas-metas', label: 'Minhas Metas', icon: PiggyBank, color: 'text-yellow-600 dark:text-yellow-400' },
+  { href: '/calendario', label: 'Calendário', icon: Calendar, color: 'text-purple-600 dark:text-purple-400' },
+  { href: '/dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-cyan-600 dark:text-cyan-400' },
+  { href: '/tutoriais', label: 'Tutoriais', icon: PlayCircle, color: 'text-pink-600 dark:text-pink-400' },
+  { href: '/configuracoes', label: 'Configurações', icon: Settings, color: 'text-gray-600 dark:text-gray-400' },
 ]
 
 export default function Sidebar() {
@@ -88,12 +88,12 @@ export default function Sidebar() {
                 disabled={isLoading || isActive}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth text-left disabled:opacity-100 ${
                   isActive
-                    ? 'bg-brand-aqua shadow-lg'
-                    : 'hover:bg-gray-100 dark:hover:bg-brand-midnight/50 disabled:hover:bg-transparent'
+                    ? 'bg-brand-aqua text-brand-midnight shadow-lg'
+                    : 'text-gray-700 dark:text-brand-clean hover:bg-gray-100 dark:hover:bg-brand-midnight/50 disabled:hover:bg-transparent'
                 }`}
               >
                 {isLoading ? (
-                  <Loader2 size={20} strokeWidth={2} className="animate-spin text-brand-midnight dark:text-brand-clean" />
+                  <Loader2 size={20} strokeWidth={2} className={`animate-spin ${isActive ? 'text-brand-midnight' : 'text-gray-700 dark:text-brand-clean'}`} />
                 ) : (
                   <Icon 
                     size={20} 
@@ -101,7 +101,7 @@ export default function Sidebar() {
                     className={isActive ? 'text-brand-midnight' : item.color}
                   />
                 )}
-                <span className={`font-medium ${isActive ? 'text-brand-midnight' : 'text-brand-midnight dark:text-brand-clean'}`}>
+                <span className={`font-medium ${isActive ? 'text-brand-midnight' : 'text-gray-700 dark:text-brand-clean'}`}>
                   {item.label}
                 </span>
               </button>
