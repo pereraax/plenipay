@@ -68,7 +68,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-brand-royal border-r border-brand-midnight shadow-lg z-50 hidden lg:block">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-brand-royal border-r border-gray-200 dark:border-brand-midnight shadow-lg z-50 hidden lg:block">
       <div className="p-6">
         <div className="mb-6">
           <Logo />
@@ -89,11 +89,11 @@ export default function Sidebar() {
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-smooth text-left disabled:opacity-100 ${
                   isActive
                     ? 'bg-brand-aqua shadow-lg'
-                    : 'hover:bg-brand-midnight/50 disabled:hover:bg-transparent'
+                    : 'hover:bg-gray-100 dark:hover:bg-brand-midnight/50 disabled:hover:bg-transparent'
                 }`}
               >
                 {isLoading ? (
-                  <Loader2 size={20} strokeWidth={2} className="animate-spin" />
+                  <Loader2 size={20} strokeWidth={2} className="animate-spin text-brand-midnight dark:text-brand-clean" />
                 ) : (
                   <Icon 
                     size={20} 
@@ -101,7 +101,7 @@ export default function Sidebar() {
                     className={isActive ? 'text-brand-midnight' : item.color}
                   />
                 )}
-                <span className={`font-medium ${isActive ? 'text-brand-midnight' : 'text-brand-clean'}`}>
+                <span className={`font-medium ${isActive ? 'text-brand-midnight' : 'text-brand-midnight dark:text-brand-clean'}`}>
                   {item.label}
                 </span>
               </button>
@@ -109,7 +109,7 @@ export default function Sidebar() {
           })}
           
           {/* Botão Fazer Upgrade - abaixo de Configurações */}
-          <div className="mt-6 pt-6 border-t border-brand-midnight/30">
+          <div className="mt-6 pt-6 border-t border-gray-200 dark:border-brand-midnight/30">
             <button
               onClick={() => router.push('/upgrade')}
               onMouseEnter={() => router.prefetch('/upgrade')}
