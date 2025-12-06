@@ -233,36 +233,35 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+    <div className="min-h-screen relative overflow-hidden py-6 px-4">
       <AnimatedBackground />
-      <div className="w-full max-w-md relative z-10">
-        <Link
-          href="/planos"
-          className="inline-flex items-center gap-2 text-brand-clean/70 hover:text-brand-aqua transition-smooth mb-6"
-        >
-          <ArrowLeft size={20} />
-          <span>Voltar para planos</span>
-        </Link>
-
-        <div className="bg-brand-royal/50 backdrop-blur-sm rounded-3xl p-8 border border-brand-aqua/20 shadow-2xl">
-          <div className="text-center mb-8">
+      <div className="w-full max-w-md mx-auto relative z-10">
+        <div className="bg-brand-royal/50 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-brand-aqua/20 shadow-2xl">
+          <Link
+            href="/planos"
+            className="inline-flex items-center gap-2 text-brand-clean/70 hover:text-brand-aqua transition-smooth mb-6 -mt-2"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm">Voltar para planos</span>
+          </Link>
+          <div className="text-center mb-6">
             <Image 
               src="/logo.png" 
               alt="PLENIPAY" 
               width={140}
               height={32}
-              className="h-8 w-auto object-contain mx-auto mb-4"
+              className="h-8 w-auto object-contain mx-auto mb-3"
               priority
             />
-            <h1 className="text-3xl font-display font-bold text-brand-white mb-2">
+            <h1 className="text-2xl sm:text-3xl font-display font-bold text-brand-white mb-2">
               Criar Conta
             </h1>
-            <p className="text-brand-clean/70">
+            <p className="text-sm text-brand-clean/70">
               Plano selecionado: <span className="text-brand-aqua font-semibold">{planosNomes[plano]}</span>
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-brand-clean mb-2">
                 Nome Completo *
