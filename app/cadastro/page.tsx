@@ -301,7 +301,7 @@ export default function CadastroPage() {
                   required
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className={`w-full px-4 py-3 bg-brand-midnight/50 border rounded-xl text-brand-white placeholder-brand-clean/40 focus:ring-2 focus:ring-brand-aqua transition-smooth pr-12 ${
+                  className={`w-full px-4 py-3 bg-brand-midnight/50 border rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none transition-smooth pr-12 ${
                     formData.senha && !senhaValida
                       ? 'border-red-500/50 focus:border-red-500'
                       : formData.senha && senhaValida
@@ -358,9 +358,9 @@ export default function CadastroPage() {
                 onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
                 className={`w-full px-4 py-3 bg-brand-midnight/50 border-2 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none transition-smooth ${
                   senhasNaoCoincidem
-                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/50 ring-2 ring-red-500/30'
+                    ? 'border-red-500 focus:border-red-500'
                     : senhasCoincidem
-                    ? 'border-green-500 focus:border-green-500 focus:ring-green-500/50 ring-2 ring-green-500/30'
+                    ? 'border-green-500 focus:border-green-500'
                     : 'border-brand-aqua/20 focus:border-brand-aqua'
                 }`}
                 placeholder="Confirme sua senha"

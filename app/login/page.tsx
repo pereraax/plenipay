@@ -307,7 +307,7 @@ export default function LoginPage() {
                   required
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:ring-2 focus:ring-brand-aqua focus:border-brand-aqua transition-smooth pr-12"
+                  className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth pr-12"
                   placeholder="Sua senha"
                 />
                 <button

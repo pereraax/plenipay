@@ -56,6 +56,26 @@ body {
   }
 }
 
+/* Remover outline amarelo padrão do navegador em todos os campos de formulário */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+}
+
+/* Garantir que não haja ring ou outline em campos focados */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none !important;
+  outline-offset: 0 !important;
+  box-shadow: none !important;
+}
+
 /* Fonte moderna para títulos com font-display - permite bold quando necessário */
 .font-display {
   letter-spacing: 0.01em;
