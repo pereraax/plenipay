@@ -41,9 +41,9 @@ export default function NotificationBell() {
         const viewportHeight = window.innerHeight
         
         if (isMobile) {
-          // MOBILE: centralizar no meio da tela
+          // MOBILE: centralizar horizontalmente, posicionar abaixo do botão
           const popupWidth = Math.min(380, viewportWidth - 32)
-          const top = Math.max(80, (viewportHeight - 400) / 2) // Centralizar verticalmente
+          const top = rect.bottom + 8 // Posicionar logo abaixo do botão
           const left = (viewportWidth - popupWidth) / 2 // Centralizar horizontalmente
           const availableHeight = viewportHeight - top - 16
           const maxHeight = Math.max(200, Math.min(availableHeight, 600))
