@@ -71,7 +71,7 @@ export default function LandingPage() {
             </Link>
             <Link
               href="/login"
-              className="inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 bg-brand-royal/50 backdrop-blur-sm border-2 border-brand-aqua/30 text-brand-white rounded-xl font-semibold hover:bg-brand-royal/70 hover:border-brand-aqua/50 transition-all duration-300 text-sm sm:text-base lg:text-lg w-full sm:w-auto justify-center"
+              className="hidden md:inline-flex items-center gap-2 sm:gap-3 px-5 sm:px-6 lg:px-8 py-2.5 sm:py-3 lg:py-4 bg-brand-royal/50 backdrop-blur-sm border-2 border-brand-aqua/30 text-brand-white rounded-xl font-semibold hover:bg-brand-royal/70 hover:border-brand-aqua/50 transition-all duration-300 text-sm sm:text-base lg:text-lg w-full sm:w-auto justify-center"
             >
               Entrar
         </Link>
