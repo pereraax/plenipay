@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ArrowRight, Wallet, BarChart3, Calendar, CreditCard, Shield, Zap, Star, TrendingUp, PiggyBank, FileText, Hand, CheckCircle2, Smartphone, Globe, Lock, Sparkles } from 'lucide-react'
+import { ArrowRight, Wallet, BarChart3, Calendar, CreditCard, Shield, Zap, Star, TrendingUp, PiggyBank, FileText, Hand, CheckCircle2, Smartphone, Globe, Lock, DollarSign } from 'lucide-react'
 import AnimatedBackground from '@/components/AnimatedBackground'
 import { MenuButton } from '@/components/MobileMenu'
 import { createClient } from '@/lib/supabase/client'
@@ -81,7 +81,7 @@ export default function LandingPage() {
       <section className="container mx-auto px-3 sm:px-4 lg:px-6 pt-4 pb-8 sm:pt-6 sm:pb-12 md:pt-8 md:pb-16 lg:pt-12 lg:pb-24 text-center relative z-20">
         <div className={`transition-all duration-1000 ${isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
           <div className="inline-flex items-center gap-1.5 sm:gap-2 px-2.5 sm:px-3 lg:px-4 py-1 sm:py-1.5 lg:py-2 bg-brand-aqua/10 border border-brand-aqua/30 rounded-full mb-3 sm:mb-4 lg:mb-6 animate-pulse">
-            <Sparkles size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-brand-aqua" />
+            <DollarSign size={12} className="sm:w-3.5 sm:h-3.5 lg:w-4 lg:h-4 text-brand-aqua" />
             <span className="text-[10px] sm:text-xs lg:text-sm font-medium text-brand-aqua whitespace-nowrap">Plataforma #1 em Controle Financeiro</span>
           </div>
           <h1 className="text-3xl sm:text-4xl md:text-6xl lg:text-7xl xl:text-8xl font-display font-bold text-brand-white mb-3 sm:mb-4 lg:mb-6 leading-tight px-2">
@@ -468,7 +468,7 @@ export default function LandingPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-lg bg-brand-aqua/20 flex items-center justify-center flex-shrink-0">
-                      <Sparkles size={20} className="text-brand-aqua" />
+                      <DollarSign size={20} className="text-brand-aqua" />
                     </div>
                     <div>
                       <p className="font-semibold text-brand-white">Gamificação</p>
