@@ -39,7 +39,7 @@ export default async function SupportPanel() {
       {/* Alertas - só mostra se houver dívidas pendentes */}
       {alert && (
         <div className="bg-brand-white dark:bg-brand-royal rounded-2xl p-4 shadow-lg border border-brand-clean dark:border-white/10">
-          <h3 className="font-display text-brand-midnight dark:text-brand-clean mb-3 flex items-center gap-2">
+          <h3 className="font-display font-bold text-brand-midnight dark:text-brand-clean mb-3 flex items-center gap-2">
             <AlertCircle size={20} className="text-orange-600 dark:text-orange-400" />
             Avisos Importantes
           </h3>
@@ -60,7 +60,7 @@ export default async function SupportPanel() {
 
       {/* Dicas */}
       <div className="bg-brand-white dark:bg-brand-royal rounded-2xl p-4 shadow-lg border border-brand-clean dark:border-white/10">
-        <h3 className="font-display text-brand-midnight dark:text-brand-clean mb-3 flex items-center gap-2">
+        <h3 className="font-display font-bold text-brand-midnight dark:text-brand-clean mb-3 flex items-center gap-2">
           <Lightbulb size={20} className="text-yellow-600 dark:text-yellow-400" />
           Dicas e Suporte
         </h3>
@@ -91,7 +91,7 @@ export default async function SupportPanel() {
 
       {/* Links rápidos */}
       <div className="bg-brand-white dark:bg-brand-royal rounded-2xl p-4 shadow-lg border border-brand-clean dark:border-white/10">
-        <h3 className="font-display text-brand-midnight dark:text-brand-clean mb-3">
+        <h3 className="font-display font-bold text-brand-midnight dark:text-brand-clean mb-3">
           Acesso Rápido
         </h3>
         <div className="space-y-2">
