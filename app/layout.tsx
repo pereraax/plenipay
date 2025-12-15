@@ -5,6 +5,7 @@ import ChatWidget from '@/components/ChatWidget'
 import PlenAssistant from '@/components/PlenAssistant'
 import { MenuProvider } from '@/components/MobileMenu'
 import MobileMenu from '@/components/MobileMenu'
+import VisitorTrackingWrapper from '@/components/VisitorTrackingWrapper'
 
 export const metadata: Metadata = {
   title: 'PLENIPAY - Sistema de Contas - Controle Financeiro',
@@ -33,6 +34,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider>
           <MenuProvider>
+            <VisitorTrackingWrapper />
             {children}
             <MobileMenu />
             <ChatWidget />

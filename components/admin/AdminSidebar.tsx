@@ -22,6 +22,7 @@ const menuItems = [
   { href: '/administracaosecr/banners', label: 'Banners', icon: ImageIcon },
   { href: '/administracaosecr/chat', label: 'Chat de Suporte', icon: MessageCircle },
   { href: '/administracaosecr/tutoriais', label: 'Tutoriais', icon: PlayCircle },
+  { href: '/administracaosecr/whatsapp', label: 'WhatsApp PLEN', icon: MessageCircle },
 ]
 
 export default function AdminSidebar({ onClose }: { onClose?: () => void }) {

@@ -11,7 +11,7 @@ import {
   TrendingDown
 } from 'lucide-react'
 import type { MetaCofrinho, BauMeta } from '@/lib/types'
-import { criarDepositoCofrinho, obterBausMetaCofrinho, coletarBauMeta } from '@/lib/actions'
+import { criarDepositoCofrinho, obterBausMetaCofrinho, coletarBauMeta, criarBausAutomaticos } from '@/lib/actions'
 import { formatarValorEmTempoReal, converterValorFormatadoParaNumero } from '@/lib/formatCurrency'
 
 // Importar confetti apenas no cliente - sempre dinamicamente para evitar erro de webpack
@@ -132,20 +132,38 @@ const gerarBausComMeta = (meta: MetaCofrinho, valorMaxPorBau: number, numBaus: n
   return baus
 }
 
-// Determinar quais baús devem brilhar (30% deles, aleatoriamente)
-const gerarBausBrilhantes = (numBaus: number = 50): Set<number> => {
+// Determinar quais baús devem brilhar (30% deles, de forma consistente baseado em seed)
+const gerarBausBrilhantes = (numBaus: number = 50, seed: string = ''): Set<number> => {
   const bausBrilhantes = new Set<number>()
   
+  // Criar um gerador pseudo-aleatório baseado no seed para garantir consistência
+  let hash = 0
+  for (let i = 0; i < seed.length; i++) {
+    const char = seed.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash // Convert to 32bit integer
+  }
+  
+  // Função para gerar número pseudo-aleatório baseado no seed
+  let seedValue = Math.abs(hash)
+  const random = () => {
+    seedValue = (seedValue * 9301 + 49297) % 233280
+    return seedValue / 233280
+  }
+  
   for (let i = 1; i <= numBaus; i++) {
-    if (Math.random() < 0.3) { // 30% de chance de brilhar
+    if (random() < 0.3) { // 30% de chance de brilhar
       bausBrilhantes.add(i)
     }
   }
   
   // Garantir que pelo menos alguns baús brilhem
   if (bausBrilhantes.size < 10) {
-    while (bausBrilhantes.size < 15) {
-      bausBrilhantes.add(Math.floor(Math.random() * numBaus) + 1)
+    let tentativas = 0
+    while (bausBrilhantes.size < 15 && tentativas < 100) {
+      const numero = Math.floor(random() * numBaus) + 1
+      bausBrilhantes.add(numero)
+      tentativas++
     }
   }
   
@@ -269,34 +287,60 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
     const carregarBaus = async () => {
       try {
         console.log('🔍 Buscando baús do banco para meta:', meta.id)
-        const { data: bausDoBanco, error } = await obterBausMetaCofrinho(meta.id)
+        const resultadoBusca = await obterBausMetaCofrinho(meta.id)
+        let bausDoBanco = resultadoBusca.data
+        const error = resultadoBusca.error
         
         if (error) {
           console.error('❌ Erro ao buscar baús:', error)
-          // Fallback: gerar baús se não existirem no banco
-          const valorMaxPorBau = meta.valor_max_por_bau || 150
-          const numBaus = meta.num_baus_total || 50
-          const bausGerados = gerarBausComMeta(meta, valorMaxPorBau, numBaus)
-          const brilhosGerados = gerarBausBrilhantes(numBaus)
-          setBaus(bausGerados)
-          setBausBrilhantes(brilhosGerados)
+          // NÃO gerar baús aleatórios - mostrar erro e esperar que sejam criados no banco
+          console.error('⚠️ Baús devem ser criados no banco de dados. Não é possível gerar valores aleatórios.')
+          setBaus([])
+          setBausBrilhantes(new Set())
+          setBausDoBanco([])
           setMounted(true)
           return
         }
         
         if (!bausDoBanco || bausDoBanco.length === 0) {
-          console.error('❌ Erro crítico: Nenhum baú foi criado automaticamente')
-          // Fallback de emergência: gerar baús localmente
+          console.log('⚠️ Nenhum baú encontrado. Criando baús automaticamente...')
+          
+          // Criar baús automaticamente com valores determinísticos
           const valorMaxPorBau = meta.valor_max_por_bau || 150
           const numBaus = meta.num_baus_total || Math.ceil(meta.meta_total / valorMaxPorBau)
-          const bausGerados = gerarBausComMeta(meta, valorMaxPorBau, numBaus)
-          const brilhosGerados = gerarBausBrilhantes(numBaus)
           
-          setBaus(bausGerados)
-          setBausBrilhantes(brilhosGerados)
-          setBausDoBanco([])
-          setMounted(true)
-          return
+          const resultado = await criarBausAutomaticos(
+            meta.id,
+            meta.user_id,
+            meta.meta_total,
+            valorMaxPorBau,
+            numBaus
+          )
+
+          if (resultado.error) {
+            console.error('❌ Erro ao criar baús automaticamente:', resultado.error)
+            setBaus([])
+            setBausBrilhantes(new Set())
+            setBausDoBanco([])
+            setMounted(true)
+            return
+          }
+
+          // Recarregar baús após criação
+          const resultadoRecarregar = await obterBausMetaCofrinho(meta.id)
+          
+          if (resultadoRecarregar.error || !resultadoRecarregar.data || resultadoRecarregar.data.length === 0) {
+            console.error('❌ Erro ao recarregar baús após criação')
+            setBaus([])
+            setBausBrilhantes(new Set())
+            setBausDoBanco([])
+            setMounted(true)
+            return
+          }
+
+          // Usar os baús criados
+          bausDoBanco = resultadoRecarregar.data
+          console.log('✅ Baús criados automaticamente:', bausDoBanco.length)
         }
         
         console.log('✅ Baús carregados do banco:', bausDoBanco.length)
@@ -312,23 +356,34 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
           }
         })
         
-        // Identificar baús coletados
+        // Identificar baús coletados - IMPORTANTE: sempre carregar do banco
         const coletados = new Set<number>()
-        const proximoDisponivel = bausDoBanco.find((bau: BauMeta) => !bau.coletado)?.numero_bau || 1
-        
+        let proximoDisponivel = 1
+
         bausDoBanco.forEach((bau: BauMeta) => {
           if (bau.coletado) {
             coletados.add(bau.numero_bau)
           }
         })
+
+        // Encontrar o primeiro baú NÃO coletado na ordem correta
+        const bausOrdenados = [...bausDoBanco].sort((a, b) => a.numero_bau - b.numero_bau)
+        const primeiroNaoColetado = bausOrdenados.find((bau: BauMeta) => !bau.coletado)
+        if (primeiroNaoColetado) {
+          proximoDisponivel = primeiroNaoColetado.numero_bau
+        } else {
+          // Se todos foram coletados, usar o último + 1 (ou o total se não houver mais)
+          const ultimoNumero = bausOrdenados.length > 0 ? bausOrdenados[bausOrdenados.length - 1].numero_bau : 1
+          proximoDisponivel = ultimoNumero + 1
+        }
         
         setBaus(bausFormatados)
         setBausDoBanco(bausDoBanco) // Armazenar baús do banco com IDs
         setBausColetados(coletados)
         setProximoBauDisponivel(proximoDisponivel)
         
-        // Gerar brilhos (30% dos baús)
-        const brilhosGerados = gerarBausBrilhantes(bausDoBanco.length)
+        // Gerar brilhos (30% dos baús) - usar meta.id como seed para garantir consistência
+        const brilhosGerados = gerarBausBrilhantes(bausDoBanco.length, meta.id)
         setBausBrilhantes(brilhosGerados)
         setMounted(true)
         
@@ -497,10 +552,17 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
         return newSet
       })
       
-      // Encontrar próximo baú disponível
+      // Encontrar próximo baú disponível - IMPORTANTE: atualizar estado do banco primeiro
       if (bausDoBanco.length > 0) {
-        // Se há baús no banco, usar eles
-        const proximoBau = bausDoBanco.find(b => !b.coletado && b.numero_bau > bauColetadoId)
+        // Atualizar o estado local do baú coletado no array bausDoBanco
+        const bausAtualizados = bausDoBanco.map(b => 
+          b.numero_bau === bauColetadoId ? { ...b, coletado: true } : b
+        )
+        setBausDoBanco(bausAtualizados)
+        
+        // Se há baús no banco, usar eles - encontrar o primeiro NÃO coletado na ordem
+        const bausOrdenados = [...bausAtualizados].sort((a, b) => a.numero_bau - b.numero_bau)
+        const proximoBau = bausOrdenados.find(b => !b.coletado)
         if (proximoBau) {
           setProximoBauDisponivel(proximoBau.numero_bau)
           console.log('📝 Próximo baú disponível:', proximoBau.numero_bau)
@@ -598,6 +660,32 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
       
       console.log('🎉 Todas as animações de confete agendadas!')
 
+      // Recarregar os baús do banco para garantir sincronização antes de atualizar a página
+      console.log('🔄 Recarregando baús do banco para sincronização...')
+      try {
+        const { data: bausAtualizados, error: erroAtualizacao } = await obterBausMetaCofrinho(meta.id)
+        if (!erroAtualizacao && bausAtualizados && bausAtualizados.length > 0) {
+          // Atualizar estado com dados frescos do banco
+          const coletadosAtualizados = new Set<number>()
+          bausAtualizados.forEach((bau: BauMeta) => {
+            if (bau.coletado) {
+              coletadosAtualizados.add(bau.numero_bau)
+            }
+          })
+          
+          const bausOrdenados = [...bausAtualizados].sort((a, b) => a.numero_bau - b.numero_bau)
+          const proximoDisponivelAtualizado = bausOrdenados.find((bau: BauMeta) => !bau.coletado)?.numero_bau || (bausOrdenados.length > 0 ? bausOrdenados[bausOrdenados.length - 1].numero_bau + 1 : 1)
+          
+          setBausColetados(coletadosAtualizados)
+          setProximoBauDisponivel(proximoDisponivelAtualizado)
+          setBausDoBanco(bausAtualizados)
+          
+          console.log('✅ Estado sincronizado com banco de dados')
+        }
+      } catch (error) {
+        console.warn('⚠️ Erro ao recarregar baús (continuando mesmo assim):', error)
+      }
+      
       // Aguardar 5 segundos para o usuário VER os confetes e o baú ficar cinza antes de recarregar
       console.log('⏱️ Aguardando 5 segundos para visualizar confetes e mudança antes do reload...')
       setTimeout(() => {
@@ -632,22 +720,22 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Título da seção */}
-      <div className="text-center px-3 sm:px-4 mb-5 sm:mb-6">
-        <h3 className="text-xl sm:text-2xl md:text-3xl font-display text-brand-white mb-2 sm:mb-3 flex items-center justify-center gap-2">
-          <Gift className="text-yellow-400 sm:w-7 sm:h-7 md:w-8 md:h-8" size={24} />
+      <div className="text-center px-3 sm:px-4 mb-3 sm:mb-4">
+        <h3 className="text-lg sm:text-xl md:text-2xl font-display text-gray-900 dark:text-brand-white mb-1.5 sm:mb-2 flex items-center justify-center gap-2">
+          <Gift className="text-yellow-400 sm:w-5 sm:h-5 md:w-6 md:h-6" size={20} />
           <span className="hidden sm:inline">Escolha seu Baú de Tesouro</span>
           <span className="sm:hidden">Baús de Tesouro</span>
         </h3>
-        <p className="text-brand-clean text-xs sm:text-sm md:text-base max-w-2xl mx-auto px-2 leading-relaxed">
+        <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm max-w-2xl mx-auto px-2 leading-relaxed">
           Clique em um baú para abrir e descobrir seu prêmio surpresa! 
           Cada baú oferece um desconto especial no seu depósito!
         </p>
       </div>
 
       {/* Grid de Baús - 3 colunas mobile fixas, organizadas com espaçamento profissional */}
-      <div className="grid grid-cols-3 gap-x-4 sm:gap-x-5 md:gap-x-6 gap-y-20 sm:gap-y-24 lg:gap-y-28 max-w-5xl mx-auto pb-8 sm:pb-10 px-3 sm:px-4 md:px-0">
+      <div className="grid grid-cols-3 gap-x-3 sm:gap-x-4 md:gap-x-5 gap-y-16 sm:gap-y-20 lg:gap-y-24 max-w-4xl mx-auto pb-4 sm:pb-6 px-3 sm:px-4 md:px-0">
         {baus.map((bau, index) => {
           // Determinar direção da seta baseado na posição - trajeto em S (zig-zag)
           // Mobile: 3 colunas, Tablet: 4 colunas, Desktop: 5 colunas
@@ -707,7 +795,7 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
                   relative
                   aspect-square
                   flex flex-col items-center justify-center
-                  w-full max-w-[75px] sm:max-w-[85px] md:max-w-[95px] lg:max-w-[105px] mx-auto
+                  w-full max-w-[60px] sm:max-w-[70px] md:max-w-[80px] lg:max-w-[90px] mx-auto
                   ${animandoAbertura && bauAberto === bau.valor ? 'animate-bounce' : ''}
                 `}>
                   {/* Ícone do baú de tesouro - maior */}
@@ -720,20 +808,20 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
                   </div>
                   
                   {/* Valor e botão abaixo do baú - maior, legível e organizado */}
-                  <div className="absolute -bottom-14 sm:-bottom-16 md:-bottom-18 left-1/2 transform -translate-x-1/2 text-center w-full flex flex-col items-center gap-1.5 sm:gap-2 pb-1">
-                    <p className={`font-bold text-sm sm:text-base md:text-lg drop-shadow-lg ${foiColetado ? 'text-gray-500' : 'text-white'} leading-tight whitespace-nowrap`}>
+                  <div className="absolute -bottom-12 sm:-bottom-14 md:-bottom-16 left-1/2 transform -translate-x-1/2 text-center w-full flex flex-col items-center gap-1.5 sm:gap-2">
+                    <p className={`font-bold text-xs sm:text-sm md:text-base text-gray-900 dark:text-white leading-tight whitespace-nowrap ${foiColetado ? 'opacity-50' : ''}`}>
                       R$ {bau.valor.toFixed(2).replace('.', ',')}
                     </p>
                     {foiColetado ? (
-                      <div className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 bg-gray-600 text-gray-300 rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-lg whitespace-nowrap">
+                      <div className="px-2 sm:px-3 py-1 bg-gray-400 dark:bg-gray-600 text-white dark:text-gray-300 rounded-full text-xs sm:text-sm font-semibold shadow-md whitespace-nowrap">
                         Coletado
                       </div>
                     ) : eProximo ? (
-                      <div className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 bg-gradient-to-r from-brand-aqua to-blue-500 text-brand-midnight rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-lg whitespace-nowrap animate-pulse">
+                      <div className="px-2 sm:px-3 py-1 bg-gradient-to-r from-[#00C2FF] to-[#0099CC] text-white rounded-full text-xs sm:text-sm font-semibold shadow-md whitespace-nowrap animate-pulse">
                         Abrir!
                       </div>
                     ) : (
-                      <div className="px-3 sm:px-4 md:px-5 py-1.5 sm:py-2 bg-gray-700 text-gray-400 rounded-full text-xs sm:text-sm md:text-base font-semibold shadow-lg whitespace-nowrap">
+                      <div className="px-2 sm:px-3 py-1 bg-gray-300 dark:bg-gray-700 text-gray-600 dark:text-gray-400 rounded-full text-xs sm:text-sm font-semibold shadow-md whitespace-nowrap">
                         Aguarde
                       </div>
                     )}
@@ -746,9 +834,9 @@ export default function BauTesouro({ meta }: BauTesouroProps) {
               {direcaoSeta && (
                 <div className={`
                   absolute pointer-events-none z-10
-                  ${direcaoSeta === 'right' ? 'right-[-20px] sm:right-[-24px] md:right-[-28px] top-1/2 -translate-y-1/2' : ''}
-                  ${direcaoSeta === 'left' ? 'left-[-20px] sm:left-[-24px] md:left-[-28px] top-1/2 -translate-y-1/2' : ''}
-                  ${direcaoSeta === 'down' ? 'bottom-[-80px] sm:bottom-[-42px] md:bottom-[-48px] left-1/2 -translate-x-1/2' : ''}
+                  ${direcaoSeta === 'right' ? 'right-[-16px] sm:right-[-18px] md:right-[-20px] top-1/2 -translate-y-1/2' : ''}
+                  ${direcaoSeta === 'left' ? 'left-[-16px] sm:left-[-18px] md:left-[-20px] top-1/2 -translate-y-1/2' : ''}
+                  ${direcaoSeta === 'down' ? 'bottom-[-68px] sm:bottom-[-90px] md:bottom-[-100px] left-1/2 -translate-x-1/2' : ''}
                 `}>
                   <SetaDirecao direcao={direcaoSeta} ativo={setaAtiva} />
                 </div>

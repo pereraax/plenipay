@@ -2,15 +2,17 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { Check, ArrowLeft, Loader2, Smartphone, Receipt, CreditCard, X } from 'lucide-react'
+import { Check, ArrowLeft, Loader2, Smartphone, Receipt, CreditCard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/components/NotificationBell'
 import Sidebar from '@/components/Sidebar'
+import { MenuButton } from '@/components/MobileMenu'
+import Logo from '@/components/Logo'
 
 export default function CheckoutPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const plano = searchParams.get('plano') as 'basico' | 'premium' | null
+  const plano = searchParams.get('plano') as 'basico' | 'premium' | 'anual' | null
 
   const [loading, setLoading] = useState(false)
   const [userProfile, setUserProfile] = useState<any>(null)
@@ -23,7 +25,7 @@ export default function CheckoutPage() {
   })
 
   useEffect(() => {
-    if (!plano || !['basico', 'premium'].includes(plano)) {
+    if (!plano || !['basico', 'premium', 'anual'].includes(plano)) {
       createNotification('Plano inválido', 'warning')
       router.push('/upgrade')
       return
@@ -252,44 +254,66 @@ export default function CheckoutPage() {
   const valores = {
     basico: 29.90,
     premium: 49.90,
+    anual: 197.00,
+  }
+
+  const planosNomes = {
+    basico: 'Básico',
+    premium: 'Premium',
+    anual: 'Anual',
   }
 
   if (loadingProfile) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
+      <div className="min-h-screen bg-white">
         <Sidebar />
         <main className="lg:ml-64 min-h-screen flex items-center justify-center">
-          <Loader2 className="animate-spin text-brand-aqua" size={48} />
+          <Loader2 className="animate-spin text-[#00C2FF]" size={48} />
         </main>
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight">
+    <div className="min-h-screen bg-white">
       <Sidebar />
-      <main className="lg:ml-64 min-h-screen p-4 lg:p-8">
-        <div className="max-w-2xl mx-auto">
-          <button
-            onClick={() => router.push('/upgrade')}
-            className="flex items-center gap-2 text-brand-clean/70 hover:text-white mb-6 transition-smooth"
-          >
-            <ArrowLeft size={20} />
-            <span>Voltar</span>
-          </button>
-
-          <div className="bg-brand-royal/80 backdrop-blur-sm rounded-3xl p-8 border-2 border-brand-aqua/30 shadow-2xl">
-            <h1 className="text-3xl font-display font-bold text-white mb-2">
+      <main className="lg:ml-64 min-h-screen p-4 lg:p-6">
+        {/* Header Mobile */}
+        <div className="lg:hidden pt-4 pb-4 px-3 sm:px-4 bg-white border-b border-gray-200 mb-4">
+          <div className="flex justify-center mb-4">
+            <div className="w-40 sm:w-52">
+              <Logo />
+            </div>
+          </div>
+          <div className="flex items-center gap-3 px-3">
+            <MenuButton />
+            <h1 className="text-xl sm:text-2xl font-display font-bold text-[#0D1B2A] leading-none">
               Finalizar Assinatura
             </h1>
-            <p className="text-brand-clean/70 mb-8">
-              Plano {plano === 'basico' ? 'Básico' : 'Premium'} - R$ {valores[plano!].toFixed(2).replace('.', ',')}/mês
+          </div>
+        </div>
+
+        <div className="max-w-xl mx-auto">
+          <button
+            onClick={() => router.push('/upgrade')}
+            className="flex items-center gap-2 text-gray-600 hover:text-[#00C2FF] mb-4 transition-colors"
+          >
+            <ArrowLeft size={18} />
+            <span className="text-sm">Voltar</span>
+          </button>
+
+          <div className="bg-white rounded-xl p-5 sm:p-6 shadow-lg border border-gray-200">
+            <h1 className="text-2xl font-display font-bold text-[#0D1B2A] mb-1">
+              Finalizar Assinatura
+            </h1>
+            <p className="text-gray-600 text-sm mb-6">
+              Plano {planosNomes[plano!]} - R$ {valores[plano!].toFixed(2).replace('.', ',')}{plano === 'anual' ? '/ano' : '/mês'}
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
               {/* Nome */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   Nome Completo *
                 </label>
                 <input
@@ -297,14 +321,14 @@ export default function CheckoutPage() {
                   required
                   value={formData.nome}
                   onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-midnight border border-brand-aqua/30 rounded-xl text-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                  className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-2 focus:ring-[#00C2FF]/20 transition-smooth text-sm"
                   placeholder="Seu nome completo"
                 />
               </div>
 
               {/* CPF */}
               <div>
-                <label className="block text-sm font-medium text-white mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
                   CPF *
                 </label>
                 <input
@@ -317,76 +341,76 @@ export default function CheckoutPage() {
                   }}
                   placeholder="000.000.000-00"
                   maxLength={14}
-                  className="w-full px-4 py-3 bg-brand-midnight border border-brand-aqua/30 rounded-xl text-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                  className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-2 focus:ring-[#00C2FF]/20 transition-smooth text-sm"
                 />
               </div>
 
               {/* Método de Pagamento */}
               <div>
-                <label className="block text-sm font-medium text-white mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-3">
                   Método de Pagamento *
                 </label>
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, metodoPagamento: 'PIX' })}
-                    className={`w-full p-4 rounded-xl border-2 transition-smooth flex items-center gap-3 ${
+                    className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
                       formData.metodoPagamento === 'PIX'
-                        ? 'border-brand-aqua bg-brand-aqua/20'
-                        : 'border-brand-aqua/30 hover:border-brand-aqua/50'
+                        ? 'border-[#00C2FF] bg-[#00C2FF]/10'
+                        : 'border-gray-200 hover:border-[#00C2FF]/50 bg-white'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'PIX' ? 'bg-brand-aqua' : 'bg-brand-midnight'}`}>
-                      <Smartphone size={24} className="text-white" />
+                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'PIX' ? 'bg-[#00C2FF]' : 'bg-gray-100'}`}>
+                      <Smartphone size={20} className="text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-white">PIX</p>
-                      <p className="text-xs text-brand-clean/70">Aprovação imediata</p>
+                      <p className="font-semibold text-gray-900 text-sm">PIX</p>
+                      <p className="text-xs text-gray-500">Aprovação imediata</p>
                     </div>
                     {formData.metodoPagamento === 'PIX' && (
-                      <Check size={20} className="text-brand-aqua" />
+                      <Check size={18} className="text-[#00C2FF]" />
                     )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, metodoPagamento: 'BOLETO' })}
-                    className={`w-full p-4 rounded-xl border-2 transition-smooth flex items-center gap-3 ${
+                    className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
                       formData.metodoPagamento === 'BOLETO'
-                        ? 'border-brand-aqua bg-brand-aqua/20'
-                        : 'border-brand-aqua/30 hover:border-brand-aqua/50'
+                        ? 'border-[#00C2FF] bg-[#00C2FF]/10'
+                        : 'border-gray-200 hover:border-[#00C2FF]/50 bg-white'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'BOLETO' ? 'bg-brand-aqua' : 'bg-brand-midnight'}`}>
-                      <Receipt size={24} className="text-white" />
+                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'BOLETO' ? 'bg-[#00C2FF]' : 'bg-gray-100'}`}>
+                      <Receipt size={20} className="text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-white">Boleto</p>
-                      <p className="text-xs text-brand-clean/70">Vencimento em 3 dias úteis</p>
+                      <p className="font-semibold text-gray-900 text-sm">Boleto</p>
+                      <p className="text-xs text-gray-500">Vencimento em 3 dias úteis</p>
                     </div>
                     {formData.metodoPagamento === 'BOLETO' && (
-                      <Check size={20} className="text-brand-aqua" />
+                      <Check size={18} className="text-[#00C2FF]" />
                     )}
                   </button>
 
                   <button
                     type="button"
                     onClick={() => setFormData({ ...formData, metodoPagamento: 'CREDIT_CARD' })}
-                    className={`w-full p-4 rounded-xl border-2 transition-smooth flex items-center gap-3 ${
+                    className={`w-full p-3 rounded-lg border-2 transition-all flex items-center gap-3 ${
                       formData.metodoPagamento === 'CREDIT_CARD'
-                        ? 'border-brand-aqua bg-brand-aqua/20'
-                        : 'border-brand-aqua/30 hover:border-brand-aqua/50'
+                        ? 'border-[#00C2FF] bg-[#00C2FF]/10'
+                        : 'border-gray-200 hover:border-[#00C2FF]/50 bg-white'
                     }`}
                   >
-                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'CREDIT_CARD' ? 'bg-brand-aqua' : 'bg-brand-midnight'}`}>
-                      <CreditCard size={24} className="text-white" />
+                    <div className={`p-2 rounded-lg ${formData.metodoPagamento === 'CREDIT_CARD' ? 'bg-[#00C2FF]' : 'bg-gray-100'}`}>
+                      <CreditCard size={20} className="text-white" />
                     </div>
                     <div className="flex-1 text-left">
-                      <p className="font-semibold text-white">Cartão de Crédito</p>
-                      <p className="text-xs text-brand-clean/70">Aprovação imediata</p>
+                      <p className="font-semibold text-gray-900 text-sm">Cartão de Crédito</p>
+                      <p className="text-xs text-gray-500">Aprovação imediata</p>
                     </div>
                     {formData.metodoPagamento === 'CREDIT_CARD' && (
-                      <Check size={20} className="text-brand-aqua" />
+                      <Check size={18} className="text-[#00C2FF]" />
                     )}
                   </button>
                 </div>
@@ -396,17 +420,17 @@ export default function CheckoutPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full px-6 py-4 bg-brand-aqua text-white rounded-xl font-semibold hover:bg-brand-aqua/90 transition-smooth disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="w-full px-4 py-3 bg-[#00C2FF] hover:bg-[#0099CC] text-white rounded-lg font-semibold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 text-sm shadow-md hover:shadow-lg"
               >
                 {loading ? (
                   <>
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin" />
                     <span>Processando...</span>
                   </>
                 ) : (
                   <>
                     <span>Pagar Agora</span>
-                    <ArrowLeft size={20} className="rotate-180" />
+                    <ArrowLeft size={18} className="rotate-180" />
                   </>
                 )}
               </button>
@@ -417,4 +441,3 @@ export default function CheckoutPage() {
     </div>
   )
 }
-

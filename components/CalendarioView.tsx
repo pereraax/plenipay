@@ -127,7 +127,7 @@ export default function CalendarioView({ registros, usuarios = [] }: CalendarioV
                 setDataSelecionada(dia)
                 setDataModal(dia)
               }}
-              className={`aspect-square p-2 rounded-xl border-2 transition-all hover:scale-105 ${
+              className={`aspect-square p-1.5 rounded-xl border-2 transition-all hover:scale-105 overflow-hidden ${
                 isSelected
                   ? 'border-brand-aqua bg-gradient-to-br from-brand-aqua/20 to-brand-blue/20 dark:from-brand-aqua/30 dark:to-brand-blue/30 shadow-lg shadow-brand-aqua/20'
                   : isToday
@@ -135,9 +135,9 @@ export default function CalendarioView({ registros, usuarios = [] }: CalendarioV
                   : 'border-gray-200 dark:border-white/20 hover:border-brand-aqua/50 dark:hover:border-brand-aqua/50 hover:bg-gray-50 dark:hover:bg-white/5'
               }`}
             >
-              <div className="flex flex-col h-full">
+              <div className="flex flex-col h-full min-h-0">
                 <span
-                  className={`text-sm font-bold mb-1 ${
+                  className={`text-sm font-bold mb-0.5 flex-shrink-0 ${
                     isSelected
                       ? 'text-brand-aqua'
                       : isToday
@@ -148,19 +148,19 @@ export default function CalendarioView({ registros, usuarios = [] }: CalendarioV
                   {format(dia, 'd')}
                 </span>
                 {temRegistros && (
-                  <div className="mt-auto space-y-1">
+                  <div className="flex-1 flex flex-col justify-end gap-0.5 min-h-0 overflow-hidden">
                     {totalEntrada > 0 && (
-                      <div className="text-[10px] font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1.5 py-0.5 rounded">
-                        +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalEntrada)}
+                      <div className="text-[9px] font-semibold text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30 px-1 py-0.5 rounded leading-tight truncate">
+                        +{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalEntrada)}
                       </div>
                     )}
                     {totalSaida > 0 && (
-                      <div className="text-[10px] font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1.5 py-0.5 rounded">
-                        -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0 }).format(totalSaida)}
+                      <div className="text-[9px] font-semibold text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30 px-1 py-0.5 rounded leading-tight truncate">
+                        -{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(totalSaida)}
                       </div>
                     )}
                     {registrosDia.length > 2 && (
-                      <div className="text-[10px] text-brand-midnight/60 dark:text-brand-clean/60 font-medium text-center">
+                      <div className="text-[9px] text-brand-midnight/60 dark:text-brand-clean/60 font-medium text-center leading-tight">
                         {registrosDia.length} registros
                       </div>
                     )}

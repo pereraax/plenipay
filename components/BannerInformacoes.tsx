@@ -122,7 +122,7 @@ export default function BannerInformacoes() {
   if (loading) {
     console.log('⏳ [BannerInformacoes] Mostrando loading...')
     return (
-      <div className="mb-6 w-full flex justify-center">
+      <div className="w-full flex justify-center">
         <div 
           className="rounded-2xl shadow-lg relative overflow-hidden w-full bg-brand-midnight/50 animate-pulse"
           style={{ 
@@ -139,7 +139,7 @@ export default function BannerInformacoes() {
   console.log('✅ [BannerInformacoes] Renderizando banner com', banners.length, 'banners')
 
   return (
-    <div className="mb-6 w-full flex justify-center">
+    <div className="w-full flex justify-center" style={{ marginBottom: 0, paddingBottom: 0, marginTop: 0 }}>
       <div 
         ref={containerRef}
         className="rounded-2xl shadow-lg relative overflow-hidden w-full bg-brand-midnight/50"

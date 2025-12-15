@@ -1,5 +1,7 @@
-import { Lightbulb, HelpCircle, TrendingUp, AlertCircle } from 'lucide-react'
-import { obterEstatisticas } from '@/lib/actions'
+'use client'
+
+import { Lightbulb, HelpCircle, TrendingUp, AlertCircle, MessageCircle } from 'lucide-react'
+import { useEffect, useState } from 'react'
 
 const tips = [
   {
@@ -22,17 +24,38 @@ const tips = [
   }
 ]
 
-export default async function SupportPanel() {
-  // Buscar estatísticas para verificar se há dívidas pendentes
-  const stats = await obterEstatisticas()
-  const temDividasPendentes = stats.totalDividasPendentes && stats.totalDividasPendentes > 0.01
+export default function SupportPanel() {
+  const [whatsappUrl, setWhatsappUrl] = useState<string | null>(null)
+  const [stats, setStats] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
 
-  const alert = temDividasPendentes ? {
-    icon: AlertCircle,
-    title: 'Atenção',
-    content: 'Você tem dívidas pendentes. Verifique a seção de Dívidas para mais detalhes.',
-    color: 'text-orange-600 bg-orange-50 border-orange-200'
-  } : null
+  useEffect(() => {
+    // Buscar estatísticas e status do WhatsApp
+    async function carregar() {
+      try {
+        // Verificar WhatsApp
+        const whatsappResponse = await fetch('/api/whatsapp/setup')
+        const whatsappData = await whatsappResponse.json()
+        
+        if (whatsappData.configured && whatsappData.whatsappUrl) {
+          setWhatsappUrl(whatsappData.whatsappUrl)
+        } else {
+          // Usar número do .env se disponível (só funciona no servidor, então vamos usar uma variável pública)
+          // Por enquanto, vamos deixar null e o botão só aparece se configurado
+        }
+      } catch (error) {
+        console.error('Erro ao carregar dados:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    carregar()
+  }, [])
+
+  // Por enquanto, não vamos mostrar alertas de dívidas (precisa de server action)
+  // Se precisar, podemos criar uma API route
+  const alert = null
 
   return (
     <div className="space-y-4">
@@ -95,6 +118,19 @@ export default async function SupportPanel() {
           Acesso Rápido
         </h3>
         <div className="space-y-2">
+          {/* Botão Assistente PLEN no WhatsApp */}
+          {whatsappUrl && (
+            <a
+              href={whatsappUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 p-3 text-sm font-medium text-white bg-green-500 hover:bg-green-600 dark:bg-green-600 dark:hover:bg-green-700 rounded-lg transition-smooth shadow-md hover:shadow-lg"
+            >
+              <MessageCircle size={18} />
+              <span>Assistente PLEN no WhatsApp</span>
+            </a>
+          )}
+          
           <a
             href="/registros"
             className="block p-2 text-sm text-brand-aqua dark:text-brand-aqua hover:bg-brand-aqua/10 dark:hover:bg-brand-aqua/20 rounded-lg transition-smooth"

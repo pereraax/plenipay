@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { criarRegistro, obterUsuarios } from '@/lib/actions'
 import { User } from '@/lib/types'
-import { Plus, X, User as UserIcon, CreditCard, Wallet, Smartphone, UtensilsCrossed, Car, Home, ShoppingBag, Heart, GraduationCap, Briefcase, Gamepad2, Music, Film, Dumbbell, Plane, Coffee } from 'lucide-react'
+import { Plus, X, User as UserIcon, CreditCard, Wallet, Smartphone, UtensilsCrossed, Car, Home, ShoppingBag, Heart, GraduationCap, Briefcase, Gamepad2, Music, Film, Dumbbell, Plane, Coffee, HelpCircle, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createNotification } from './NotificationBell'
 import ModalSelecionarUsuario from './ModalSelecionarUsuario'
@@ -17,6 +17,26 @@ export default function FormularioRegistro() {
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<User | null>(null)
   const [etiquetas, setEtiquetas] = useState<string[]>([])
   const [novaEtiqueta, setNovaEtiqueta] = useState('')
+  const [showHelpNome, setShowHelpNome] = useState(false)
+  const [showHelpObservacao, setShowHelpObservacao] = useState(false)
+
+  // Fechar tooltips ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.help-tooltip-container')) {
+        setShowHelpNome(false)
+        setShowHelpObservacao(false)
+      }
+    }
+
+    if (showHelpNome || showHelpObservacao) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [showHelpNome, showHelpObservacao])
   const [formData, setFormData] = useState({
     nome: '',
     observacao: '',
@@ -26,9 +46,10 @@ export default function FormularioRegistro() {
     categoria: '',
     metodo_pagamento: 'dinheiro' as 'pix' | 'cartao' | 'dinheiro',
     parcelas_totais: '1',
-    parcelas_pagas: '0',
+    valor_parcelas: '',
     data_registro: new Date().toISOString().slice(0, 16),
   })
+  const [temParcelas, setTemParcelas] = useState(false)
 
   const categorias = [
     { id: 'alimentacao', nome: 'Alimentação', icon: UtensilsCrossed },
@@ -87,8 +108,19 @@ export default function FormularioRegistro() {
     form.append('valor', valorFinal.toString())
     form.append('categoria', formData.categoria)
     form.append('etiquetas', JSON.stringify([...etiquetas, formData.metodo_pagamento]))
-    form.append('parcelas_totais', formData.parcelas_totais)
-    form.append('parcelas_pagas', formData.parcelas_pagas)
+    if (!temParcelas) {
+      form.append('parcelas_totais', '1')
+      form.append('parcelas_pagas', '0')
+    } else {
+      form.append('parcelas_totais', formData.parcelas_totais)
+      // Converter valor das parcelas para número de parcelas pagas baseado no valor total
+      const valorParcelas = converterValorFormatadoParaNumero(formData.valor_parcelas)
+      const valorTotal = valorFinal
+      const parcelasPagas = valorTotal > 0 && valorParcelas > 0 
+        ? Math.round((valorParcelas / valorTotal) * parseInt(formData.parcelas_totais))
+        : 0
+      form.append('parcelas_pagas', Math.min(parcelasPagas, parseInt(formData.parcelas_totais)).toString())
+    }
     form.append('data_registro', new Date(formData.data_registro).toISOString())
 
     const result = await criarRegistro(form)
@@ -107,9 +139,10 @@ export default function FormularioRegistro() {
         categoria: '',
         metodo_pagamento: 'dinheiro',
         parcelas_totais: '1',
-        parcelas_pagas: '0',
+        valor_parcelas: '',
         data_registro: new Date().toISOString().slice(0, 16),
       })
+      setTemParcelas(false)
       setEtiquetas([])
       router.refresh()
     }
@@ -121,8 +154,37 @@ export default function FormularioRegistro() {
     <>
     <form onSubmit={handleSubmit} className="space-y-6">
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Nome do registro *
+        <label className="flex items-center gap-2 mb-2 text-sm font-medium text-gray-700">
+          <span>Nome do registro *</span>
+          <div className="relative help-tooltip-container flex items-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowHelpNome(!showHelpNome)
+              }}
+              className="p-0.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-smooth flex items-center justify-center"
+            >
+              <HelpCircle size={16} className="text-gray-500 dark:text-brand-clean/60 hover:text-brand-aqua transition-colors" />
+            </button>
+            {showHelpNome && (
+              <div 
+                className="absolute left-0 top-6 z-50 w-64 p-3 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg shadow-lg text-xs text-gray-700 dark:text-brand-clean"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="font-semibold mb-1">Exemplos de nomes:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-brand-clean/80">
+                  <li>Salário mensal</li>
+                  <li>Aluguel</li>
+                  <li>Supermercado</li>
+                  <li>Conta de luz</li>
+                  <li>Combustível</li>
+                  <li>Farmácia</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </label>
         <input
           type="text"
@@ -130,20 +192,47 @@ export default function FormularioRegistro() {
           value={formData.nome}
           onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
           className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
-          placeholder="Ex: Salário mensal, Aluguel, Supermercado, Conta de luz..."
+          placeholder="Ex: Salário, Aluguel, Supermercado..."
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          Observação
+        <label className="flex items-center gap-2 mb-2 text-sm font-medium text-gray-700">
+          <span>Observação</span>
+          <div className="relative help-tooltip-container flex items-center">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault()
+                e.stopPropagation()
+                setShowHelpObservacao(!showHelpObservacao)
+              }}
+              className="p-0.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-smooth flex items-center justify-center"
+            >
+              <HelpCircle size={16} className="text-gray-500 dark:text-brand-clean/60 hover:text-brand-aqua transition-colors" />
+            </button>
+            {showHelpObservacao && (
+              <div 
+                className="absolute left-0 top-6 z-50 w-72 p-3 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg shadow-lg text-xs text-gray-700 dark:text-brand-clean"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <p className="font-semibold mb-1">Adicione detalhes sobre este registro:</p>
+                <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-brand-clean/80">
+                  <li>Pagamento da conta de luz do mês de novembro</li>
+                  <li>Compra de mantimentos para a semana</li>
+                  <li>Pagamento de mensalidade escolar</li>
+                  <li>Despesa com manutenção do carro</li>
+                </ul>
+              </div>
+            )}
+          </div>
         </label>
         <textarea
           value={formData.observacao}
           onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
           rows={3}
           className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
-          placeholder="Adicione detalhes sobre este registro. Ex: 'Pagamento da conta de luz do mês de novembro', 'Compra de mantimentos para a semana'..."
+          placeholder="Adicione detalhes sobre este registro..."
         />
       </div>
 
@@ -247,7 +336,7 @@ export default function FormularioRegistro() {
         <label className="block text-sm font-medium text-brand-midnight mb-2">
           Categoria
         </label>
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-4 gap-3">
           {categorias.map((cat) => {
             const Icon = cat.icon
             const isSelected = formData.categoria === cat.id
@@ -256,15 +345,15 @@ export default function FormularioRegistro() {
                 key={cat.id}
                 type="button"
                 onClick={() => setFormData({ ...formData, categoria: isSelected ? '' : cat.id })}
-                className={`flex flex-col items-center gap-2 px-3 py-3 rounded-xl font-medium transition-smooth overflow-hidden ${
+                className={`flex flex-col items-center justify-center gap-2 px-3 py-4 rounded-xl font-medium transition-smooth min-h-[100px] ${
                   isSelected
                     ? 'bg-brand-aqua/90 text-brand-midnight shadow-lg'
                     : 'bg-brand-clean/50 text-brand-midnight border border-gray-300 hover:bg-brand-clean/70'
                 }`}
                 title={cat.nome}
               >
-                <Icon size={24} strokeWidth={2} />
-                <span className="text-[10px] leading-tight text-center break-words max-w-full px-1">{cat.nome}</span>
+                <Icon size={28} strokeWidth={2.5} className="flex-shrink-0" />
+                <span className="text-xs font-medium text-center leading-tight break-words w-full">{cat.nome}</span>
               </button>
             )
           })}
@@ -357,49 +446,108 @@ export default function FormularioRegistro() {
         )}
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Parcelas totais
+      {/* Opção de Parcelas */}
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-3 cursor-pointer group">
+            <div className="relative">
+              <input
+                type="checkbox"
+                checked={temParcelas}
+                onChange={(e) => {
+                  setTemParcelas(e.target.checked)
+                  if (!e.target.checked) {
+                    // Ao desativar parcelas, resetar valores
+                    setFormData({ ...formData, parcelas_totais: '1', valor_parcelas: '' })
+                  }
+                }}
+                className="sr-only"
+              />
+              <div
+                className={`
+                  w-6 h-6 rounded-lg border-2 transition-all duration-300 flex items-center justify-center
+                  ${temParcelas
+                    ? 'bg-gradient-to-br from-brand-aqua to-brand-blue border-brand-aqua shadow-lg shadow-brand-aqua/30'
+                    : 'bg-white dark:bg-brand-midnight border-gray-300 dark:border-white/20 group-hover:border-brand-aqua/50 group-hover:bg-brand-aqua/5 dark:group-hover:bg-brand-aqua/10'
+                  }
+                `}
+              >
+                {temParcelas && (
+                  <Check
+                    size={16}
+                    className="text-white dark:text-brand-midnight font-bold"
+                    strokeWidth={3}
+                  />
+                )}
+              </div>
+            </div>
+            <span className={`
+              text-sm font-medium transition-colors duration-200
+              ${temParcelas
+                ? 'text-brand-aqua dark:text-brand-aqua'
+                : 'text-gray-700 dark:text-brand-clean'
+              }
+            `}>
+              Esse registro tem parcelas?
+            </span>
           </label>
-          <input
-            type="number"
-            min="1"
-            value={formData.parcelas_totais}
-            onChange={(e) => setFormData({ ...formData, parcelas_totais: e.target.value })}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
-          />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-2">
-            Parcelas pagas
-          </label>
-          <input
-            type="number"
-            min="0"
-            value={formData.parcelas_pagas}
-            onChange={(e) => setFormData({ ...formData, parcelas_pagas: e.target.value })}
-            className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
-          />
-        </div>
-      </div>
 
-      {parseInt(formData.parcelas_totais) > 1 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-          <p className="text-sm text-blue-700">
-            <strong>Previsão:</strong> Faltam{' '}
-            {parseInt(formData.parcelas_totais) - parseInt(formData.parcelas_pagas)} parcelas
-            {parseInt(formData.parcelas_totais) > parseInt(formData.parcelas_pagas) && (
-              <span>
-                {' '}
-                (aproximadamente{' '}
-                {parseInt(formData.parcelas_totais) - parseInt(formData.parcelas_pagas)} meses
-                para quitar)
-              </span>
+        {temParcelas && (
+          <>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Parcelas totais
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  value={formData.parcelas_totais}
+                  onChange={(e) => setFormData({ ...formData, parcelas_totais: e.target.value })}
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Valor das parcelas
+                </label>
+                <input
+                  type="text"
+                  value={formData.valor_parcelas}
+                  onChange={(e) => {
+                    const formatted = formatarValorEmTempoReal(e.target.value)
+                    setFormData({ ...formData, valor_parcelas: formatted })
+                  }}
+                  placeholder="0,00"
+                  className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight"
+                />
+              </div>
+            </div>
+
+            {parseInt(formData.parcelas_totais) > 1 && formData.valor_parcelas && (
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm text-blue-700">
+                  <strong>Valor informado:</strong> R$ {formData.valor_parcelas}
+                  {(() => {
+                    const valorParcelas = converterValorFormatadoParaNumero(formData.valor_parcelas)
+                    const valorTotal = converterValorFormatadoParaNumero(formData.valor)
+                    const parcelasPagas = valorTotal > 0 && valorParcelas > 0 
+                      ? Math.round((valorParcelas / valorTotal) * parseInt(formData.parcelas_totais))
+                      : 0
+                    const parcelasRestantes = parseInt(formData.parcelas_totais) - parcelasPagas
+                    return parcelasRestantes > 0 ? (
+                      <span>
+                        {' '}• Faltam {parcelasRestantes} parcelas
+                      </span>
+                    ) : null
+                  })()}
+                </p>
+              </div>
             )}
-          </p>
-        </div>
-      )}
+          </>
+        )}
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-2">

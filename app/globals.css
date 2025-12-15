@@ -16,6 +16,10 @@
   }
 }
 
+html {
+  scroll-behavior: smooth;
+}
+
 html, body {
   height: 100%;
   min-height: 100vh;
@@ -139,6 +143,18 @@ h6.font-display {
   .animate-fade-in {
     animation: fadeIn 0.2s ease-out;
   }
+
+  .animate-slide-fade {
+    animation: slideFade 0.5s ease-out;
+  }
+
+  .animate-slide-fade-delayed {
+    animation: slideFade 0.6s ease-out;
+  }
+
+  .animate-slide-smooth {
+    animation: slideSmooth 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
   
   .animate-slide-up {
     animation: slideUp 0.2s ease-out;
@@ -158,6 +174,31 @@ h6.font-display {
   
   .animate-bounce-slow {
     animation: bounceSlow 2s ease-in-out infinite;
+  }
+}
+
+@keyframes slideFade {
+  0% {
+    opacity: 0;
+    transform: translateX(30px) scale(0.95);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes slideSmooth {
+  0% {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -223,6 +264,19 @@ h6.font-display {
   }
 }
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 3s infinite;
+}
+
 /* Animação flutuante para elementos */
 @keyframes float {
   0%, 100% {
@@ -277,6 +331,21 @@ h6.font-display {
 .animate-float-delayed {
   animation: float-delayed 4s ease-in-out infinite;
   animation-delay: 1s;
+}
+
+.animate-float-1 {
+  animation: float 4s ease-in-out infinite;
+  animation-delay: 0s;
+}
+
+.animate-float-2 {
+  animation: float 5s ease-in-out infinite;
+  animation-delay: 1.5s;
+}
+
+.animate-float-3 {
+  animation: float 4.5s ease-in-out infinite;
+  animation-delay: 2.5s;
 }
 
 @keyframes twinkle {

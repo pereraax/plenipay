@@ -142,7 +142,7 @@ export default function ModalCriarMeta({ onClose, onMetaCriada, metaParaEditar }
               <div className="p-1.5 bg-brand-aqua rounded-lg">
                 <Target size={16} className="text-brand-midnight" />
               </div>
-              <h2 className="text-lg font-display text-brand-midnight dark:text-brand-clean">
+              <h2 className="text-lg font-display font-bold text-brand-midnight dark:text-brand-clean">
                 {metaParaEditar ? 'Editar Meta' : 'Criar Nova Meta'}
               </h2>
             </div>
@@ -221,11 +221,11 @@ export default function ModalCriarMeta({ onClose, onMetaCriada, metaParaEditar }
 
                 {/* Valor da Meta */}
                 <div>
-                  <label className="block text-xs font-medium text-brand-midnight mb-1">
+                  <label className="block text-xs font-medium text-brand-midnight dark:text-white mb-1">
                     Valor total da meta
                   </label>
                   <div className="relative">
-                    <DollarSign className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400" size={14} />
+                    <DollarSign className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-white/70" size={14} />
                     <input
                       type="text"
                       value={metaTotalStr}
@@ -233,7 +233,7 @@ export default function ModalCriarMeta({ onClose, onMetaCriada, metaParaEditar }
                         setMetaTotalStr(formatarValorEmTempoReal(e.target.value))
                       }}
                       placeholder="0,00"
-                      className="w-full pl-8 pr-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-sm font-semibold text-brand-midnight dark:text-brand-clean placeholder-gray-400 dark:placeholder-brand-clean/50"
+                      className="w-full pl-8 pr-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-sm font-semibold text-brand-midnight dark:text-white placeholder-gray-400 dark:placeholder-white/50"
                     />
                   </div>
                 </div>

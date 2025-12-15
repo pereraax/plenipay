@@ -10,7 +10,6 @@ import ModalConfirmacao from './ModalConfirmacao'
 import ModalEditarRegistro from './ModalEditarRegistro'
 import ModalPagarDivida from './ModalPagarDivida'
 import ModalDivida from './ModalDivida'
-import TutorialDividas from './TutorialDividas'
 import { useRouter } from 'next/navigation'
 import { createNotification } from './NotificationBell'
 
@@ -383,7 +382,7 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
       {/* Header com botão de registrar e filtro */}
       <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
         <div className="flex-1 w-full sm:max-w-md">
-          <div className="relative" data-tutorial="busca-dividas">
+          <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-brand-midnight/50 dark:text-brand-clean/50" size={20} />
             <input
               type="text"
@@ -406,7 +405,6 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
           )}
           <button
             onClick={() => setShowModalNovaDivida(true)}
-            data-tutorial="registrar-divida"
             className="w-full sm:w-auto px-5 py-2.5 bg-brand-aqua text-brand-midnight rounded-lg font-semibold hover:bg-brand-aqua/90 transition-smooth flex items-center justify-center gap-2 shadow-md hover:shadow-lg text-sm whitespace-nowrap"
           >
             <Plus size={20} strokeWidth={2.5} />
@@ -416,7 +414,7 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
       </div>
 
       {/* Estatísticas */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6" data-tutorial="estatisticas-dividas">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 lg:gap-6">
         <div className="bg-brand-white dark:bg-brand-royal rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-brand-clean dark:border-white/10">
           <div className="flex items-center gap-3 mb-3">
             <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
@@ -483,7 +481,7 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
           </h2>
           <div className="bg-brand-white dark:bg-brand-royal rounded-2xl shadow-lg border border-brand-clean dark:border-white/10 overflow-hidden animate-fade-in">
             {/* Mobile: Cards */}
-            <div className="md:hidden space-y-4 p-4" data-tutorial="tabela-dividas">
+            <div className="md:hidden space-y-4 p-4">
               {dividasPendentes.map((divida) => (
                 <div key={divida.id} className="bg-brand-royal dark:bg-brand-midnight rounded-xl p-4 border border-brand-clean/20 dark:border-white/10 relative">
                   {/* Botão de excluir no canto superior direito */}
@@ -576,12 +574,11 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
                     <div className="flex items-center gap-2 pt-2 border-t border-brand-clean/20 dark:border-white/10">
                       <button
                         onClick={() => setDividaPagando(divida)}
-                        data-tutorial="pagar-divida"
                         className="flex-1 px-4 py-2 bg-brand-aqua dark:bg-brand-aqua text-white dark:text-brand-midnight rounded-lg hover:bg-brand-aqua/90 dark:hover:bg-brand-aqua/80 transition-smooth font-medium text-sm shadow-sm"
                       >
                         Pagar Dívida
                       </button>
-                      <div data-tutorial="acoes-divida" className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                         <button
                           onClick={() => setRegistroEditando(divida)}
                           className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-smooth"
@@ -597,7 +594,7 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
             </div>
 
             {/* Desktop: Tabela */}
-            <div className="hidden md:block overflow-x-auto" data-tutorial="tabela-dividas">
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-brand-royal dark:bg-brand-midnight border-b border-brand-midnight dark:border-white/10">
                   <tr>
@@ -720,12 +717,11 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
                           <div className="flex items-center gap-2">
                             <button
                               onClick={() => setDividaPagando(divida)}
-                              data-tutorial="pagar-divida"
                               className="px-4 py-2 bg-brand-aqua dark:bg-brand-aqua text-white dark:text-brand-midnight rounded-lg hover:bg-brand-aqua/90 dark:hover:bg-brand-aqua/80 transition-smooth font-medium text-sm shadow-sm"
                             >
                               Pagar Dívida
                             </button>
-                            <div data-tutorial="acoes-divida" className="flex items-center gap-2">
+                            <div className="flex items-center gap-2">
                               <button
                                 onClick={() => setRegistroEditando(divida)}
                                 className="p-2 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-smooth"
@@ -1010,8 +1006,6 @@ export default function DividasLista({ dividas: dividasIniciais, onDividasChange
         />
       )}
 
-      {/* Tutorial */}
-      <TutorialDividas dividasCount={dividas.length} />
     </div>
   )
 }

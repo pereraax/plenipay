@@ -36,9 +36,9 @@ async function MinhasMetasContent() {
 
 export default function MinhasMetasPage() {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight dark:from-brand-midnight dark:via-brand-midnight dark:to-brand-midnight">
+    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-br dark:from-brand-midnight dark:via-brand-royal dark:to-brand-midnight">
       <Sidebar />
-      <main className="lg:ml-64 p-3 sm:p-4 md:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
+      <main className="lg:ml-64 p-3 sm:p-4 md:p-8 bg-gray-50 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">
           {/* Logotipo centralizado acima do header */}
           <div className="flex justify-center mb-2 lg:hidden">
@@ -63,10 +63,10 @@ export default function MinhasMetasPage() {
                 />
               </div>
               <div className="flex flex-col justify-center min-w-0">
-                <h1 className="text-base sm:text-lg font-display font-bold text-brand-clean leading-tight whitespace-nowrap">
+                <h1 className="text-base sm:text-lg font-display font-bold text-gray-900 dark:text-brand-clean leading-tight whitespace-nowrap">
                   Confira suas metas:
                 </h1>
-                <p className="text-brand-clean/70 text-xs sm:text-sm leading-tight mt-0.5">
+                <p className="text-gray-600 dark:text-brand-clean/70 text-xs sm:text-sm leading-tight mt-0.5">
                   Gerencie suas metas de economia
                 </p>
               </div>

@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { User } from '@/lib/types'
 import { obterUsuarios, criarUsuario, resetarTodosRegistros } from '@/lib/actions'
-import { Users, Settings as SettingsIcon, Plus, Edit, Trash2, X, User as UserIcon, LogOut, Key, Mail, Eye, EyeOff, AlertTriangle, RotateCcw, MessageCircle, Phone, Crown } from 'lucide-react'
+import { Users, Plus, Edit, Trash2, X, User as UserIcon, LogOut, Key, Mail, Eye, EyeOff, AlertTriangle, RotateCcw, MessageCircle, Phone, Crown } from 'lucide-react'
 import { createNotification } from './NotificationBell'
 import { atualizarSenha, reenviarEmailConfirmacao, signOut, limparBypassEmailConfirmacao } from '@/lib/auth'
 import { createClient } from '@/lib/supabase/client'
@@ -47,9 +47,18 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
   const [cpf, setCpf] = useState('')
   const [editandoCpf, setEditandoCpf] = useState(false)
   const [loadingCpf, setLoadingCpf] = useState(false)
+  const [whatsapp, setWhatsapp] = useState('')
+  const [editandoWhatsapp, setEditandoWhatsapp] = useState(false)
+  const [loadingWhatsapp, setLoadingWhatsapp] = useState(false)
+  const [nome, setNome] = useState('')
+  const [showModalEditarNome, setShowModalEditarNome] = useState(false)
+  const [loadingNome, setLoadingNome] = useState(false)
   const [showModalVerificarEmail, setShowModalVerificarEmail] = useState(false)
   const [bypassLimpo, setBypassLimpo] = useState(false) // Flag para evitar limpar bypass múltiplas vezes
   const [carregandoPerfil, setCarregandoPerfil] = useState(false) // Flag para evitar múltiplos carregamentos simultâneos
+  const [whatsappKey, setWhatsappKey] = useState<string | null>(null)
+  const [loadingWhatsappKey, setLoadingWhatsappKey] = useState(false)
+  const [showWhatsappKey, setShowWhatsappKey] = useState(false)
 
   useEffect(() => {
     const tab = searchParams.get('tab')
@@ -57,15 +66,34 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
       setTabAtivo('usuarios')
     } else if (tab === 'perfil') {
       setTabAtivo('perfil')
+    } else if (tab === 'whatsapp') {
+      setTabAtivo('whatsapp')
     } else {
-      setTabAtivo('geral')
+      setTabAtivo('perfil') // Padrão agora é Perfil ao invés de Geral
     }
     carregarUsuarios()
     // Carregar perfil apenas se estiver na aba de perfil e não houver erro de sessão
     if (tab === 'perfil' && !userProfile?.error) {
       carregarPerfil()
     }
+    // Carregar chave WhatsApp se estiver na aba de perfil
+    if (tab === 'perfil') {
+      carregarWhatsappKey()
+    }
   }, [searchParams, userProfile?.error])
+  
+  // Função para carregar chave WhatsApp
+  const carregarWhatsappKey = async () => {
+    try {
+      const response = await fetch('/api/user/whatsapp-key')
+      const data = await response.json()
+      if (data.success) {
+        setWhatsappKey(data.whatsapp_key)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar chave WhatsApp:', error)
+    }
+  }
 
   // Listener de mudanças de autenticação
   useEffect(() => {
@@ -285,6 +313,21 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
           // Carregar CPF se existir
           if (profile.cpf) {
             setCpf(profile.cpf)
+          }
+          // Carregar WhatsApp se existir
+          if (profile.whatsapp) {
+            setWhatsapp(profile.whatsapp)
+          }
+          
+          // Carregar chave WhatsApp se existir
+          if (profile.whatsapp_key) {
+            setWhatsappKey(profile.whatsapp_key)
+          } else {
+            setWhatsappKey(null)
+          }
+          // Carregar nome se existir
+          if (profile.nome) {
+            setNome(profile.nome)
           }
         } else {
           console.log('ℹ️ Perfil ainda não criado na tabela profiles - isso é normal para novos usuários')
@@ -535,7 +578,6 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
 
   // Aba "Usuários/Pessoas" sempre visível - cada conta vê apenas seus próprios usuários/pessoas
   const tabs = [
-    { id: 'geral', label: 'Geral', icon: SettingsIcon },
     { id: 'usuarios', label: 'Usuários/Pessoas', icon: Users },
     { id: 'perfil', label: 'Perfil', icon: UserIcon },
   ]
@@ -570,18 +612,6 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
 
       {/* Conteúdo */}
       <div className="p-6">
-        {tabAtivo === 'geral' && (
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
-                Configurações Gerais
-              </h2>
-              <p className="text-sm text-brand-midnight/70 dark:text-brand-clean/70">
-                As configurações gerais foram movidas para a seção de Perfil.
-              </p>
-            </div>
-          </div>
-        )}
 
         {tabAtivo === 'perfil' && (
           <div className="space-y-6">
@@ -643,11 +673,23 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                             {(userProfile.profile?.nome || userProfile.email || 'U').charAt(0).toUpperCase()}
                           </span>
                         </div>
-                        <div>
-                          <p className="text-lg font-semibold text-brand-midnight dark:text-brand-clean">
-                            {userProfile.profile?.nome || userProfile.email?.split('@')[0] || 'Usuário'}
-                          </p>
-                          <p className="text-sm text-brand-midnight dark:text-brand-clean/60">{userProfile.email || 'Email não disponível'}</p>
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="text-lg font-semibold text-brand-midnight dark:text-brand-clean">
+                              {userProfile.profile?.nome || userProfile.email?.split('@')[0] || 'Usuário'}
+                            </p>
+                            <button
+                              onClick={() => {
+                                setNome(userProfile.profile?.nome || userProfile.email?.split('@')[0] || 'Usuário')
+                                setShowModalEditarNome(true)
+                              }}
+                              className="p-1.5 text-brand-aqua hover:text-brand-aqua/80 hover:bg-brand-aqua/10 rounded-lg transition-smooth"
+                              title="Editar nome"
+                            >
+                              <Edit size={18} strokeWidth={2} />
+                            </button>
+                          </div>
+                          <p className="text-sm text-brand-midnight dark:text-brand-clean/60 break-words">{userProfile.email || 'Email não disponível'}</p>
                         </div>
                       </div>
 
@@ -692,12 +734,129 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                         </div>
 
                         {/* WhatsApp */}
-                        {userProfile.profile?.whatsapp && (
-                          <div className="flex flex-col gap-2">
-                            <span className="text-sm font-medium text-brand-midnight dark:text-brand-clean/70">WhatsApp:</span>
-                            <span className="text-brand-midnight dark:text-brand-clean">{userProfile.profile.whatsapp}</span>
-                          </div>
-                        )}
+                        <div className="flex flex-col gap-2">
+                          <span className="text-sm font-medium text-brand-midnight dark:text-brand-clean/70">WhatsApp:</span>
+                          {editandoWhatsapp ? (
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="text"
+                                value={whatsapp}
+                                onChange={(e) => {
+                                  const value = e.target.value.replace(/\D/g, '')
+                                  if (value.length <= 10) {
+                                    const formatted = value.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+                                    setWhatsapp(formatted)
+                                  } else if (value.length <= 11) {
+                                    const formatted = value.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+                                    setWhatsapp(formatted)
+                                  } else {
+                                    setWhatsapp(value.slice(0, 11))
+                                  }
+                                }}
+                                placeholder="(00) 00000-0000"
+                                maxLength={14}
+                                className="px-3 py-2 bg-white dark:bg-brand-midnight border border-brand-aqua rounded-lg text-brand-midnight dark:text-brand-clean text-sm w-full focus:outline-none focus:border-brand-aqua"
+                              />
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    setLoadingWhatsapp(true)
+                                    try {
+                                      const supabase = createClient()
+                                      const { data: { user } } = await supabase.auth.getUser()
+                                      if (user) {
+                                        const whatsappLimpo = whatsapp.replace(/\D/g, '')
+                                        if (whatsappLimpo.length < 10) {
+                                          createNotification('WhatsApp inválido. Digite um número válido.', 'warning')
+                                          setLoadingWhatsapp(false)
+                                          return
+                                        }
+                                        
+                                        const { error } = await supabase
+                                          .from('profiles')
+                                          .update({ 
+                                            whatsapp: whatsappLimpo,
+                                            whatsapp_editado: true
+                                          })
+                                          .eq('id', user.id)
+                                        
+                                        if (error) {
+                                          createNotification('Erro ao salvar WhatsApp: ' + error.message, 'warning')
+                                        } else {
+                                          createNotification('WhatsApp salvo com sucesso!', 'success')
+                                          setEditandoWhatsapp(false)
+                                          carregarPerfil()
+                                        }
+                                      }
+                                    } catch (error: any) {
+                                      createNotification('Erro ao salvar WhatsApp', 'warning')
+                                    } finally {
+                                      setLoadingWhatsapp(false)
+                                    }
+                                  }}
+                                  disabled={loadingWhatsapp || !whatsapp.replace(/\D/g, '').match(/^\d{10,13}$/)}
+                                  className="px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {loadingWhatsapp ? 'Salvando...' : 'Salvar'}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditandoWhatsapp(false)
+                                    setWhatsapp(userProfile.profile?.whatsapp || '')
+                                  }}
+                                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-smooth font-medium text-sm"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <span className="text-brand-midnight dark:text-brand-clean">
+                                {userProfile.profile?.whatsapp 
+                                  ? (() => {
+                                      const whatsappLimpo = userProfile.profile.whatsapp.replace(/\D/g, '')
+                                      if (whatsappLimpo.length === 11) {
+                                        return whatsappLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+                                      } else if (whatsappLimpo.length === 10) {
+                                        return whatsappLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3')
+                                      }
+                                      return userProfile.profile.whatsapp
+                                    })()
+                                  : 'Não informado'}
+                              </span>
+                              {!userProfile.profile?.whatsapp_editado && (
+                                <button
+                                  onClick={() => {
+                                    const whatsappAtual = userProfile.profile?.whatsapp || ''
+                                    // Formatar o WhatsApp ao carregar para edição
+                                    if (whatsappAtual) {
+                                      const whatsappLimpo = whatsappAtual.replace(/\D/g, '')
+                                      if (whatsappLimpo.length === 11) {
+                                        setWhatsapp(whatsappLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3'))
+                                      } else if (whatsappLimpo.length === 10) {
+                                        setWhatsapp(whatsappLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3'))
+                                      } else {
+                                        setWhatsapp(whatsappAtual)
+                                      }
+                                    } else {
+                                      setWhatsapp('')
+                                    }
+                                    setEditandoWhatsapp(true)
+                                  }}
+                                  className="text-brand-aqua hover:text-brand-aqua/80 transition-smooth font-medium text-sm underline"
+                                >
+                                  {userProfile.profile?.whatsapp ? 'Editar' : 'Adicionar'}
+                                </button>
+                              )}
+                              {userProfile.profile?.whatsapp_editado && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                  (Já editado)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
 
                         {/* Telefone */}
                         {userProfile.profile?.telefone && (
@@ -711,7 +870,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                         <div className="flex flex-col gap-2">
                           <span className="text-sm font-medium text-brand-midnight dark:text-brand-clean/70">CPF:</span>
                           {editandoCpf ? (
-                            <div className="flex items-center gap-2">
+                            <div className="flex flex-col gap-2">
                               <input
                                 type="text"
                                 value={cpf}
@@ -724,62 +883,197 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                                 }}
                                 placeholder="000.000.000-00"
                                 maxLength={14}
-                                className="px-3 py-2 bg-white dark:bg-brand-midnight border border-brand-aqua rounded-lg text-brand-midnight dark:text-brand-clean text-sm w-full max-w-xs focus:outline-none focus:border-brand-aqua"
+                                className="px-3 py-2 bg-white dark:bg-brand-midnight border border-brand-aqua rounded-lg text-brand-midnight dark:text-brand-clean text-sm w-full focus:outline-none focus:border-brand-aqua"
                               />
-                              <button
-                                onClick={async () => {
-                                  setLoadingCpf(true)
-                                  try {
-                                    const supabase = createClient()
-                                    const { data: { user } } = await supabase.auth.getUser()
-                                    if (user) {
-                                      const { error } = await supabase
-                                        .from('profiles')
-                                        .update({ cpf: cpf.replace(/\D/g, '') })
-                                        .eq('id', user.id)
-                                      
-                                      if (error) {
-                                        createNotification('Erro ao salvar CPF: ' + error.message, 'warning')
-                                      } else {
-                                        createNotification('CPF salvo com sucesso!', 'success')
-                                        setEditandoCpf(false)
-                                        carregarPerfil()
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    setLoadingCpf(true)
+                                    try {
+                                      const supabase = createClient()
+                                      const { data: { user } } = await supabase.auth.getUser()
+                                      if (user) {
+                                        const { error } = await supabase
+                                          .from('profiles')
+                                          .update({ 
+                                            cpf: cpf.replace(/\D/g, ''),
+                                            cpf_editado: true
+                                          })
+                                          .eq('id', user.id)
+                                        
+                                        if (error) {
+                                          createNotification('Erro ao salvar CPF: ' + error.message, 'warning')
+                                        } else {
+                                          createNotification('CPF salvo com sucesso!', 'success')
+                                          setEditandoCpf(false)
+                                          carregarPerfil()
+                                        }
                                       }
+                                    } catch (error: any) {
+                                      createNotification('Erro ao salvar CPF', 'warning')
+                                    } finally {
+                                      setLoadingCpf(false)
                                     }
-                                  } catch (error: any) {
-                                    createNotification('Erro ao salvar CPF', 'warning')
-                                  } finally {
-                                    setLoadingCpf(false)
-                                  }
-                                }}
-                                disabled={loadingCpf || !cpf.replace(/\D/g, '').match(/^\d{11}$/)}
-                                className="px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {loadingCpf ? 'Salvando...' : 'Salvar'}
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setEditandoCpf(false)
-                                  setCpf(userProfile.profile?.cpf || '')
-                                }}
-                                className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-smooth font-medium text-sm"
-                              >
-                                Cancelar
-                              </button>
+                                  }}
+                                  disabled={loadingCpf || !cpf.replace(/\D/g, '').match(/^\d{11}$/)}
+                                  className="px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  {loadingCpf ? 'Salvando...' : 'Salvar'}
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setEditandoCpf(false)
+                                    setCpf(userProfile.profile?.cpf || '')
+                                  }}
+                                  className="px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-smooth font-medium text-sm"
+                                >
+                                  Cancelar
+                                </button>
+                              </div>
                             </div>
                           ) : (
                             <div className="flex items-center gap-2">
                               <span className="text-brand-midnight dark:text-brand-clean">
                                 {userProfile.profile?.cpf ? userProfile.profile.cpf.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4') : 'Não informado'}
                               </span>
+                              {!userProfile.profile?.cpf_editado && (
+                                <button
+                                  onClick={() => {
+                                    setCpf(userProfile.profile?.cpf || '')
+                                    setEditandoCpf(true)
+                                  }}
+                                  className="text-brand-aqua hover:text-brand-aqua/80 transition-smooth font-medium text-sm underline"
+                                >
+                                  {userProfile.profile?.cpf ? 'Editar' : 'Adicionar'}
+                                </button>
+                              )}
+                              {userProfile.profile?.cpf_editado && (
+                                <span className="text-xs text-gray-500 dark:text-gray-400 italic">
+                                  (Já editado)
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Chave WhatsApp para Assistente */}
+                        <div className="flex flex-col gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-brand-midnight dark:text-brand-clean/70">Chave WhatsApp (Assistente PLEN):</span>
+                            <MessageCircle size={16} className="text-brand-aqua" />
+                          </div>
+                          {whatsappKey ? (
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <code className="px-3 py-2 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg text-brand-midnight dark:text-brand-clean font-mono text-sm">
+                                  {showWhatsappKey ? whatsappKey : '•••••-•••••-•••••'}
+                                </code>
+                                <button
+                                  onClick={() => setShowWhatsappKey(!showWhatsappKey)}
+                                  className="p-2 text-brand-aqua hover:text-brand-aqua/80 transition-smooth"
+                                >
+                                  {showWhatsappKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                                </button>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm('Tem certeza que deseja regenerar a chave? A chave atual será invalidada.')) {
+                                      return
+                                    }
+                                    setLoadingWhatsappKey(true)
+                                    try {
+                                      const response = await fetch('/api/user/whatsapp-key', {
+                                        method: 'POST',
+                                      })
+                                      const data = await response.json()
+                                      if (data.success) {
+                                        setWhatsappKey(data.whatsapp_key)
+                                        setShowWhatsappKey(true)
+                                        createNotification('Chave regenerada com sucesso!', 'success')
+                                        carregarPerfil()
+                                      } else {
+                                        createNotification('Erro ao regenerar chave: ' + (data.error || 'Erro desconhecido'), 'warning')
+                                      }
+                                    } catch (error: any) {
+                                      createNotification('Erro ao regenerar chave', 'warning')
+                                    } finally {
+                                      setLoadingWhatsappKey(false)
+                                    }
+                                  }}
+                                  disabled={loadingWhatsappKey}
+                                  className="px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                                >
+                                  <RotateCcw size={16} />
+                                  {loadingWhatsappKey ? 'Regenerando...' : 'Regenerar Chave'}
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (!confirm('Tem certeza que deseja remover a chave? Você precisará gerar uma nova para usar o assistente WhatsApp.')) {
+                                      return
+                                    }
+                                    setLoadingWhatsappKey(true)
+                                    try {
+                                      const response = await fetch('/api/user/whatsapp-key', {
+                                        method: 'DELETE',
+                                      })
+                                      const data = await response.json()
+                                      if (data.success) {
+                                        setWhatsappKey(null)
+                                        setShowWhatsappKey(false)
+                                        createNotification('Chave removida com sucesso!', 'success')
+                                        carregarPerfil()
+                                      } else {
+                                        createNotification('Erro ao remover chave: ' + (data.error || 'Erro desconhecido'), 'warning')
+                                      }
+                                    } catch (error: any) {
+                                      createNotification('Erro ao remover chave', 'warning')
+                                    } finally {
+                                      setLoadingWhatsappKey(false)
+                                    }
+                                  }}
+                                  disabled={loadingWhatsappKey}
+                                  className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                  Remover
+                                </button>
+                              </div>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                                Use esta chave junto com seu email para autenticar no assistente PLEN via WhatsApp.
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-2">
+                              <p className="text-sm text-gray-600 dark:text-gray-400">
+                                Gere uma chave para usar o assistente PLEN via WhatsApp.
+                              </p>
                               <button
-                                onClick={() => {
-                                  setCpf(userProfile.profile?.cpf || '')
-                                  setEditandoCpf(true)
+                                onClick={async () => {
+                                  setLoadingWhatsappKey(true)
+                                  try {
+                                    const response = await fetch('/api/user/whatsapp-key', {
+                                      method: 'POST',
+                                    })
+                                    const data = await response.json()
+                                    if (data.success) {
+                                      setWhatsappKey(data.whatsapp_key)
+                                      setShowWhatsappKey(true)
+                                      createNotification('Chave gerada com sucesso!', 'success')
+                                      carregarPerfil()
+                                    } else {
+                                      createNotification('Erro ao gerar chave: ' + (data.error || 'Erro desconhecido'), 'warning')
+                                    }
+                                  } catch (error: any) {
+                                    createNotification('Erro ao gerar chave', 'warning')
+                                  } finally {
+                                    setLoadingWhatsappKey(false)
+                                  }
                                 }}
-                                className="text-brand-aqua hover:text-brand-aqua/80 transition-smooth font-medium text-sm underline"
+                                disabled={loadingWhatsappKey}
+                                className="px-4 py-2 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-medium text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 w-fit"
                               >
-                                {userProfile.profile?.cpf ? 'Editar' : 'Adicionar'}
+                                <Key size={16} />
+                                {loadingWhatsappKey ? 'Gerando...' : 'Gerar Chave'}
                               </button>
                             </div>
                           )}
@@ -820,6 +1114,119 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                             </div>
                           </>
                         )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Confirmar Email */}
+                  {userProfile && (!userProfile.email_confirmed_at || userProfile.email_confirmed_at === null || userProfile.email_confirmed_at === undefined || userProfile.email_confirmed_at === '') && (
+                    <div>
+                      <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
+                        Confirmação de Email
+                      </h2>
+                      
+                      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6">
+                        <div className="flex flex-col items-center gap-4">
+                          {/* Ícone de carta */}
+                          <div className="flex items-center justify-center w-16 h-16 bg-orange-100 dark:bg-orange-900/40 rounded-full">
+                            <Mail className="text-orange-600 dark:text-orange-400" size={32} />
+                          </div>
+                          
+                          {/* Texto principal */}
+                          <div className="text-center space-y-2">
+                            <p className="text-orange-800 dark:text-orange-200 font-semibold text-base">
+                              Seu email ainda não foi confirmado
+                            </p>
+                            <p className="text-orange-700 dark:text-orange-300 text-sm max-w-md">
+                              Verifique sua caixa de entrada e spam. Se não recebeu o email, clique no botão abaixo para reenviar.
+                            </p>
+                          </div>
+                          
+                          {/* Botão de reenviar */}
+                          <button
+                            onClick={handleReenviarEmail}
+                            disabled={loading}
+                            className="w-full max-w-xs px-4 py-2.5 bg-orange-600 dark:bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-700 dark:hover:bg-orange-600 shadow-md transition-smooth disabled:opacity-50 flex items-center justify-center gap-2"
+                          >
+                            <Mail size={18} />
+                            {loading ? 'Enviando...' : 'Reenviar Email de Confirmação'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Configurações Gerais */}
+                  <div>
+                    <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
+                      Configurações Gerais
+                    </h2>
+
+                    {/* Seção de Suporte no WhatsApp */}
+                    <div className="space-y-3 pb-6 border-b border-gray-200 dark:border-white/10 mb-6">
+                      <div>
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-brand-midnight dark:text-brand-clean mb-1">
+                          {/* Logotipo oficial do WhatsApp */}
+                          <svg 
+                            width="20" 
+                            height="20" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="text-green-600 dark:text-green-400 flex-shrink-0"
+                          >
+                            <path 
+                              d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" 
+                              fill="currentColor"
+                            />
+                          </svg>
+                          <span>Suporte no WhatsApp</span>
+                        </h3>
+                        <p className="text-sm text-brand-midnight/70 dark:text-brand-clean/70 mb-3">
+                          Precisa de ajuda? Entre em contato conosco pelo WhatsApp. Nossa equipe está pronta para ajudar você!
+                        </p>
+                        <a
+                          href="https://wa.me/5511999999999?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20PLENIPAY"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-smooth font-medium text-sm"
+                        >
+                          {/* Logotipo oficial do WhatsApp */}
+                          <svg 
+                            width="16" 
+                            height="16" 
+                            viewBox="0 0 24 24" 
+                            fill="none" 
+                            xmlns="http://www.w3.org/2000/svg"
+                            className="text-white"
+                          >
+                            <path 
+                              d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" 
+                              fill="currentColor"
+                            />
+                          </svg>
+                          Abrir WhatsApp
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* Seção de Resetar Registros */}
+                    <div className="space-y-3">
+                      <div>
+                        <h3 className="flex items-center gap-2 text-base font-semibold text-brand-midnight dark:text-brand-clean mb-1">
+                          <AlertTriangle className="text-red-600 dark:text-red-400 flex-shrink-0" size={20} strokeWidth={2} />
+                          <span>Resetar Todos os Registros</span>
+                        </h3>
+                        <p className="text-sm text-brand-midnight/70 dark:text-brand-clean/70 mb-3">
+                          Esta ação irá <strong>permanentemente deletar</strong> todos os seus registros financeiros, incluindo entradas, saídas e dívidas. Esta ação não pode ser desfeita.
+                        </p>
+                        <button
+                          onClick={() => setShowModalResetar(true)}
+                          className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-smooth font-medium text-sm"
+                        >
+                          <RotateCcw size={16} strokeWidth={2} />
+                          Resetar Todos os Registros
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -987,44 +1394,6 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                     </div>
                   </div>
 
-                  {/* Confirmar Email */}
-                  {userProfile && (!userProfile.email_confirmed_at || userProfile.email_confirmed_at === null || userProfile.email_confirmed_at === undefined || userProfile.email_confirmed_at === '') && (
-                    <div>
-                      <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
-                        Confirmação de Email
-                      </h2>
-                      
-                      <div className="bg-orange-50 dark:bg-orange-900/20 border border-orange-200 dark:border-orange-800 rounded-xl p-6">
-                        <div className="flex flex-col items-center gap-4">
-                          {/* Ícone de carta */}
-                          <div className="flex items-center justify-center w-16 h-16 bg-orange-100 dark:bg-orange-900/40 rounded-full">
-                            <Mail className="text-orange-600 dark:text-orange-400" size={32} />
-                          </div>
-                          
-                          {/* Texto principal */}
-                          <div className="text-center space-y-2">
-                            <p className="text-orange-800 dark:text-orange-200 font-semibold text-base">
-                              Seu email ainda não foi confirmado
-                            </p>
-                            <p className="text-orange-700 dark:text-orange-300 text-sm max-w-md">
-                              Verifique sua caixa de entrada e spam. Se não recebeu o email, clique no botão abaixo para reenviar.
-                            </p>
-                          </div>
-                          
-                          {/* Botão de reenviar */}
-                          <button
-                            onClick={handleReenviarEmail}
-                            disabled={loading}
-                            className="w-full max-w-xs px-4 py-2.5 bg-orange-600 dark:bg-orange-500 text-white rounded-lg font-semibold hover:bg-orange-700 dark:hover:bg-orange-600 shadow-md transition-smooth disabled:opacity-50 flex items-center justify-center gap-2"
-                          >
-                            <Mail size={18} />
-                            {loading ? 'Enviando...' : 'Reenviar Email de Confirmação'}
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Logout */}
                   <div>
                     <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
@@ -1039,89 +1408,6 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
                         <LogOut size={16} />
                         Sair da Conta
                       </button>
-                    </div>
-                  </div>
-
-                  {/* Configurações Gerais */}
-                  <div>
-                    <h2 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean mb-4">
-                      Configurações Gerais
-                    </h2>
-
-                    {/* Seção de Suporte no WhatsApp */}
-                    <div className="space-y-3 pb-6 border-b border-gray-200 dark:border-white/10 mb-6">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg flex items-center justify-center">
-                          {/* Logotipo oficial do WhatsApp */}
-                          <svg 
-                            width="20" 
-                            height="20" 
-                            viewBox="0 0 24 24" 
-                            fill="none" 
-                            xmlns="http://www.w3.org/2000/svg"
-                            className="text-green-600 dark:text-green-400"
-                          >
-                            <path 
-                              d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" 
-                              fill="currentColor"
-                            />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-base font-semibold text-brand-midnight dark:text-brand-clean mb-1">
-                            Suporte no WhatsApp
-                          </h3>
-                          <p className="text-sm text-brand-midnight/70 dark:text-brand-clean/70 mb-3">
-                            Precisa de ajuda? Entre em contato conosco pelo WhatsApp. Nossa equipe está pronta para ajudar você!
-                          </p>
-                          <a
-                            href="https://wa.me/5511999999999?text=Olá!%20Preciso%20de%20ajuda%20com%20o%20PLENIPAY"
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 dark:bg-green-500 text-white rounded-lg hover:bg-green-700 dark:hover:bg-green-600 transition-smooth font-medium text-sm"
-                          >
-                            {/* Logotipo oficial do WhatsApp */}
-                            <svg 
-                              width="16" 
-                              height="16" 
-                              viewBox="0 0 24 24" 
-                              fill="none" 
-                              xmlns="http://www.w3.org/2000/svg"
-                              className="text-white"
-                            >
-                              <path 
-                                d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z" 
-                                fill="currentColor"
-                              />
-                            </svg>
-                            Abrir WhatsApp
-                          </a>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Seção de Resetar Registros */}
-                    <div className="space-y-3">
-                      <div className="flex items-start gap-3">
-                        <div className="p-2 rounded-lg">
-                          <AlertTriangle className="text-red-600 dark:text-red-400" size={20} strokeWidth={2} />
-                        </div>
-                        <div className="flex-1">
-                          <h3 className="text-base font-semibold text-brand-midnight dark:text-brand-clean mb-1">
-                            Resetar Todos os Registros
-                          </h3>
-                          <p className="text-sm text-brand-midnight/70 dark:text-brand-clean/70 mb-3">
-                            Esta ação irá <strong>permanentemente deletar</strong> todos os seus registros financeiros, incluindo entradas, saídas e dívidas. Esta ação não pode ser desfeita.
-                          </p>
-                          <button
-                            onClick={() => setShowModalResetar(true)}
-                            className="inline-flex items-center gap-2 px-3 py-1.5 bg-red-600 dark:bg-red-500 text-white rounded-lg hover:bg-red-700 dark:hover:bg-red-600 transition-smooth font-medium text-sm"
-                          >
-                            <RotateCcw size={16} strokeWidth={2} />
-                            Resetar Todos os Registros
-                          </button>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
@@ -1181,6 +1467,7 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
             )}
           </div>
         )}
+
 
         {tabAtivo === 'usuarios' && (
           <div className="space-y-6">
@@ -1406,6 +1693,129 @@ export default function ConfiguracoesView({ tabAtivo: tabInicial }: Configuracoe
             setShowModalVerificarEmail(false)
           }}
         />
+      )}
+
+      {/* Modal de Editar Nome */}
+      {showModalEditarNome && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 z-[99999] flex items-center justify-center p-4"
+            onClick={() => setShowModalEditarNome(false)}
+            style={{
+              backdropFilter: 'blur(8px)',
+              WebkitBackdropFilter: 'blur(8px)',
+            }}
+          >
+            <div
+              className="bg-white dark:bg-brand-royal rounded-2xl shadow-2xl w-full max-w-md p-6 animate-scale-up"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-xl font-display font-bold text-brand-midnight dark:text-brand-clean">
+                  Editar Nome
+                </h3>
+                <button
+                  onClick={() => setShowModalEditarNome(false)}
+                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-colors"
+                >
+                  <X size={20} className="text-brand-midnight dark:text-brand-clean" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-brand-midnight dark:text-brand-clean mb-2">
+                    Nome
+                  </label>
+                  <input
+                    type="text"
+                    value={nome}
+                    onChange={(e) => setNome(e.target.value)}
+                    placeholder="Digite seu nome"
+                    maxLength={50}
+                    className="w-full px-4 py-3 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg text-brand-midnight dark:text-brand-clean text-base focus:outline-none focus:border-brand-aqua transition-smooth"
+                    autoFocus
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && nome.trim() && !loadingNome) {
+                        e.preventDefault()
+                        const handleSalvar = async () => {
+                          setLoadingNome(true)
+                          try {
+                            const supabase = createClient()
+                            const { data: { user } } = await supabase.auth.getUser()
+                            if (user) {
+                              const { error } = await supabase
+                                .from('profiles')
+                                .update({ nome: nome.trim() })
+                                .eq('id', user.id)
+                              
+                              if (error) {
+                                createNotification('Erro ao salvar nome: ' + error.message, 'warning')
+                              } else {
+                                createNotification('Nome salvo com sucesso!', 'success')
+                                setShowModalEditarNome(false)
+                                carregarPerfil()
+                              }
+                            }
+                          } catch (error: any) {
+                            createNotification('Erro ao salvar nome', 'warning')
+                          } finally {
+                            setLoadingNome(false)
+                          }
+                        }
+                        handleSalvar()
+                      }
+                    }}
+                  />
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    onClick={async () => {
+                      setLoadingNome(true)
+                      try {
+                        const supabase = createClient()
+                        const { data: { user } } = await supabase.auth.getUser()
+                        if (user) {
+                          const { error } = await supabase
+                            .from('profiles')
+                            .update({ nome: nome.trim() })
+                            .eq('id', user.id)
+                          
+                          if (error) {
+                            createNotification('Erro ao salvar nome: ' + error.message, 'warning')
+                          } else {
+                            createNotification('Nome salvo com sucesso!', 'success')
+                            setShowModalEditarNome(false)
+                            carregarPerfil()
+                          }
+                        }
+                      } catch (error: any) {
+                        createNotification('Erro ao salvar nome', 'warning')
+                      } finally {
+                        setLoadingNome(false)
+                      }
+                    }}
+                    disabled={loadingNome || !nome.trim()}
+                    className="flex-1 px-4 py-3 bg-brand-aqua text-white rounded-lg hover:bg-brand-aqua/90 transition-smooth font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loadingNome ? 'Salvando...' : 'Salvar'}
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowModalEditarNome(false)
+                      setNome(userProfile.profile?.nome || userProfile.email?.split('@')[0] || 'Usuário')
+                    }}
+                    disabled={loadingNome}
+                    className="px-4 py-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition-smooth font-medium disabled:opacity-50"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

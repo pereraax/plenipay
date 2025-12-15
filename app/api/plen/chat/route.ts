@@ -5,6 +5,53 @@ import { obterPlanoUsuario, obterFeaturesUsuario, podeCriarRegistro } from '@/li
 import { format, startOfWeek, endOfWeek, subDays } from 'date-fns'
 import { ptBR } from 'date-fns/locale/pt-BR'
 
+// Função auxiliar para formatar resposta de registro no novo formato
+function formatarRespostaRegistro(nome: string, valor: number, data: Date, categoria: string, tipo: string): string {
+  try {
+    // Mapear categorias para emojis
+    const categoriaEmojis: { [key: string]: string } = {
+      'moradia': '🏠',
+      'casa': '🏠',
+      'alimentação': '🍽️',
+      'alimentacao': '🍽️',
+      'transporte': '🚗',
+      'saúde': '🏥',
+      'saude': '🏥',
+      'educação': '📚',
+      'educacao': '📚',
+      'lazer': '🎮',
+      'compras': '🛍️',
+      'outros': '📦'
+    }
+    
+    // Validar e tratar valores nulos/undefined
+    const nomeFinal = nome || 'Item'
+    const valorFinal = valor || 0
+    const dataFinal = data || new Date()
+    const categoriaFinal = categoria || 'outros'
+    const tipoFinal = tipo || 'registro'
+    
+    const categoriaCapitalizada = categoriaFinal.charAt(0).toUpperCase() + categoriaFinal.slice(1).toLowerCase()
+    const emojiCategoria = categoriaEmojis[categoriaFinal.toLowerCase()] || '📦'
+    
+    // Formatar data como DD-MM-YYYY
+    const dataFormatada = format(dataFinal, 'dd-MM-yyyy', { locale: ptBR })
+    
+    // Formatar valor em reais
+    const valorFormatado = valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    
+    // Construir mensagem no novo formato
+    const mensagem = `📌 ${nomeFinal}\n🔴 R$ ${valorFormatado}\n📅 ${dataFormatada}\n🗂️ Categoria: ${categoriaCapitalizada} ${emojiCategoria}\n\n✨ Seu ${tipoFinal.toLowerCase()} foi registrado com sucesso!`
+    
+    return mensagem
+  } catch (error) {
+    console.error('❌ [PLEN] Erro ao formatar resposta de registro:', error)
+    // Fallback para mensagem simples em caso de erro
+    const valorFinal = valor || 0
+    return `✅ Registro de R$ ${valorFinal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} foi criado com sucesso!`
+  }
+}
+
 // Função auxiliar para obter ou criar usuário padrão na tabela users
 async function obterOuCriarUsuarioPadrao(supabase: any, authUserId: string, authUserEmail: string): Promise<string | null> {
   try {
@@ -328,9 +375,10 @@ function processarComando(mensagem: string, dados: any) {
                   padroes.pagamentoDireto.test(msgLower) ||
                   temPalavraPagamento
 
-  // Detectar se é entrada (palavras-chave)
+  // Detectar se é entrada (palavras-chave) - padrão mais flexível
   const isEntrada = padroes.registrarEntrada.test(msgLower) ||
-                    /(recebi|receber|ganhei|ganhar|salário|entrada de|receita)/i.test(msgLower)
+                    /(recebi|receber|ganhei|ganhar|salário|entrada de|receita)/i.test(msgLower) ||
+                    /^(ganhei|recebi|ganhar|receber)/i.test(msgLower) // Início da frase
 
   // Detectar se é dívida ANTES de entrada/gasto (prioridade)
   // Padrões mais flexíveis: "divida 30 tia", "divida de 30 tia", "divida de 20 reais josin", etc
@@ -420,8 +468,18 @@ function processarComando(mensagem: string, dados: any) {
     }
   }
 
+  // Logs de debug para detecção
+  console.log('🔍 [PLEN] Detecção:', {
+    valor,
+    isEntrada,
+    temPalavraPagamento,
+    isDivida,
+    mensagem
+  })
+  
   // Se encontrou valor E é entrada (recebi/recebeu), tratar como registro de entrada
   if (valor && isEntrada && !temPalavraPagamento && !isDivida) {
+    console.log('✅ [PLEN] Detectado como REGISTRO DE ENTRADA')
     // Extrair nome da pessoa - múltiplos padrões para "recebi X de [nome]"
     let descricao = ''
     
@@ -652,6 +710,7 @@ function processarComando(mensagem: string, dados: any) {
   }
 
 
+  console.log('⚠️ [PLEN] Nenhum comando específico detectado, retornando tipo geral')
   return { tipo: 'geral', dados: null }
 }
 
@@ -790,7 +849,9 @@ async function chamarGemini(mensagem: string, contexto: any, historico: any[]): 
   if (!process.env.GEMINI_API_KEY) return null
 
   try {
-    const model = process.env.GEMINI_MODEL || 'gemini-1.5-flash'
+    // Gemini desabilitado - use Groq ou outro provedor
+    // const model = process.env.GEMINI_MODEL || 'gemini-1.5-pro'
+    const model = 'gemini-1.5-pro' // Não será usado pois Gemini está desabilitado
     const systemPrompt = criarSystemPrompt(contexto)
     const fullPrompt = `${systemPrompt}
 
@@ -897,14 +958,16 @@ async function gerarRespostaIA(mensagem: string, contexto: any, historico: any[]
   const providers: Array<() => Promise<string | null>> = []
   
   // Modo automático: detecta qual API key está disponível e prioriza
+  // Gemini DESABILITADO (modelos instáveis, causam erros 404)
   if (aiProvider === 'auto') {
-    // Ordem: Groq (gratuito) > Gemini (gratuito) > Claude > OpenAI
+    // Ordem: Groq (gratuito e estável) > Claude > OpenAI
     if (process.env.GROQ_API_KEY) {
       providers.push(() => chamarGroq(mensagem, contexto, historico))
     }
-    if (process.env.GEMINI_API_KEY) {
-      providers.push(() => chamarGemini(mensagem, contexto, historico))
-    }
+    // Gemini removido - causa erros 404 constantes
+    // if (process.env.GEMINI_API_KEY) {
+    //   providers.push(() => chamarGemini(mensagem, contexto, historico))
+    // }
     if (process.env.ANTHROPIC_API_KEY) {
       providers.push(() => chamarClaude(mensagem, contexto, historico))
     }
@@ -915,9 +978,12 @@ async function gerarRespostaIA(mensagem: string, contexto: any, historico: any[]
   // Modo específico: usar apenas o provedor escolhido
   else if (aiProvider === 'groq') {
     providers.push(() => chamarGroq(mensagem, contexto, historico))
-  } else if (aiProvider === 'gemini') {
-    providers.push(() => chamarGemini(mensagem, contexto, historico))
-  } else if (aiProvider === 'claude') {
+  } 
+  // Gemini desabilitado - use Groq ou outro provedor
+  // else if (aiProvider === 'gemini') {
+  //   providers.push(() => chamarGemini(mensagem, contexto, historico))
+  // }
+  else if (aiProvider === 'claude') {
     providers.push(() => chamarClaude(mensagem, contexto, historico))
   } else if (aiProvider === 'openai') {
     providers.push(() => chamarOpenAI(mensagem, contexto, historico))
@@ -937,12 +1003,23 @@ async function gerarRespostaIA(mensagem: string, contexto: any, historico: any[]
   }
 
   // Fallback: processamento local se nenhuma IA funcionar
-  return processarComandoLocal(mensagem, contexto, historico)
+  console.log('⚠️ [PLEN] Nenhuma IA retornou resposta, usando processamento local')
+  const respostaLocal = processarComandoLocal(mensagem, contexto, historico)
+  if (respostaLocal && respostaLocal.trim() !== '') {
+    console.log('✅ [PLEN] Resposta do processamento local obtida')
+    return respostaLocal
+  }
+  
+  // Se ainda não tiver resposta, retornar mensagem padrão
+  console.log('⚠️ [PLEN] Processamento local não retornou resposta, usando mensagem padrão')
+  return 'Olá! Eu sou o PLEN, seu assistente financeiro. Como posso ajudá-lo hoje? Você pode registrar gastos, entradas ou consultar suas finanças.'
 }
 
 // Processamento local quando não há API de IA
 function processarComandoLocal(mensagem: string, contexto: any, historico: any[]): string {
+  console.log('🔄 [PLEN] Processamento local chamado para:', mensagem)
   const comando = processarComando(mensagem, contexto)
+  console.log('🔍 [PLEN] Comando no processamento local:', comando.tipo, comando.dados)
   
   switch (comando.tipo) {
     case 'consultar_dividas':
@@ -1000,19 +1077,33 @@ function processarComandoLocal(mensagem: string, contexto: any, historico: any[]
 }
 
 export async function POST(request: NextRequest) {
+  console.log('🚀 [PLEN] POST recebido - Iniciando processamento')
   try {
     const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
 
     if (!user) {
+      console.log('❌ [PLEN] Usuário não autenticado')
       return NextResponse.json({ error: 'Não autenticado' }, { status: 401 })
     }
 
-    const { message, conversationHistory } = await request.json()
+    console.log('✅ [PLEN] Usuário autenticado:', user.id)
+    
+    const body = await request.json()
+    console.log('📥 [PLEN] Body recebido:', { 
+      message: body.message?.substring(0, 50),
+      hasHistory: !!body.conversationHistory,
+      historyLength: body.conversationHistory?.length || 0
+    })
+    
+    const { message, conversationHistory } = body
 
     if (!message || typeof message !== 'string') {
+      console.log('❌ [PLEN] Mensagem inválida:', message)
       return NextResponse.json({ error: 'Mensagem inválida' }, { status: 400 })
     }
+    
+    console.log('✅ [PLEN] Mensagem válida, processando:', message.substring(0, 50))
 
     // Buscar dados do usuário
     const [dividasResult, registrosResult, estatisticasResult] = await Promise.all([
@@ -1142,8 +1233,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Processar comando
+    console.log('🔍 [PLEN] Processando comando para mensagem:', message)
     const comando = processarComando(message, contexto)
-    console.log('🔍 [PLEN] Comando detectado:', comando.tipo, comando.dados)
+    console.log('🔍 [PLEN] Comando detectado:', {
+      tipo: comando.tipo,
+      dados: comando.dados,
+      mensagem: message.substring(0, 50)
+    })
     console.log('📊 [PLEN] Contexto - Dívidas:', {
       quantidade: dividas.length,
       total: totalDividas,
@@ -1298,10 +1394,38 @@ export async function POST(request: NextRequest) {
         } else {
           console.log('✅ [PLEN] Registro criado com sucesso (confirmação)! ID:', resultado.data.id)
           const tipoRegistro = pendingConfirmation.tipo === 'divida' ? 'Dívida' : pendingConfirmation.tipo === 'saida' ? 'Gasto' : 'Entrada'
-          resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${pendingConfirmation.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${pendingConfirmation.descricao ? ` - ${pendingConfirmation.descricao}` : ''}`
+          const tipoNome = pendingConfirmation.tipo === 'divida' ? 'dívida' : pendingConfirmation.tipo === 'saida' ? 'gasto' : 'entrada'
+          const nomeItem = pendingConfirmation.descricao || (pendingConfirmation.tipo === 'divida' ? 'Dívida' : pendingConfirmation.tipo === 'saida' ? 'Gasto' : 'Entrada')
+          const categoria = 'outros' // Categoria padrão na confirmação
+          let dataRegistro: Date
+          if (resultado.data?.data_registro) {
+            try {
+              dataRegistro = new Date(resultado.data.data_registro)
+              if (isNaN(dataRegistro.getTime())) {
+                dataRegistro = new Date()
+              }
+            } catch {
+              dataRegistro = new Date()
+            }
+          } else {
+            dataRegistro = new Date()
+          }
+          
+          try {
+            resposta = formatarRespostaRegistro(nomeItem, pendingConfirmation.valor, dataRegistro, categoria, tipoNome)
+          } catch (error) {
+            console.error('❌ [PLEN] Erro ao formatar resposta na confirmação:', error)
+            resposta = `✅ ${tipoRegistro} de R$ ${pendingConfirmation.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} registrado com sucesso!`
+          }
           actionData = {
             action: 'created',
             message: `${tipoRegistro} registrado com sucesso!`
+          }
+          
+          // GARANTIR que temos uma resposta após a confirmação
+          if (!resposta || resposta.trim() === '') {
+            console.error('❌ [PLEN] Resposta vazia após confirmação!')
+            resposta = `✅ ${tipoRegistro} de R$ ${pendingConfirmation.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} registrado com sucesso!`
           }
         }
         pendingConfirmation = null // Limpar após processar
@@ -1318,7 +1442,12 @@ export async function POST(request: NextRequest) {
     else if (comando.tipo === 'registrar_gasto' || comando.tipo === 'registrar_entrada' || comando.tipo === 'registrar_divida') {
       console.log('✅ [PLEN] Executando registro:', comando.dados)
       
-      // Verificar se pode criar registro (limite mensal)
+      // GARANTIR que temos dados válidos antes de processar
+      if (!comando.dados || !comando.dados.valor) {
+        console.error('❌ [PLEN] Dados inválidos no comando:', comando)
+        resposta = 'Desculpe, não consegui identificar o valor. Por favor, tente novamente com uma mensagem como "ganhei 400 de mae" ou "gastei 100 reais".'
+      } else {
+        // Verificar se pode criar registro (limite mensal)
       const podeCriar = await podeCriarRegistro()
       if (!podeCriar.pode) {
         console.log('⚠️ [PLEN] Não pode criar registro:', podeCriar.motivo)
@@ -1384,15 +1513,61 @@ export async function POST(request: NextRequest) {
       } else {
         console.log('✅ [PLEN] Registro criado com sucesso! ID:', resultado.data.id)
         const tipoRegistro = comando.dados.tipo === 'divida' ? 'Dívida' : comando.dados.tipo === 'saida' ? 'Gasto' : 'Entrada'
-        resposta = `✅ Registrei com sucesso! ${tipoRegistro} de R$ ${comando.dados.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}${comando.dados.descricao ? ` - ${comando.dados.descricao}` : ''}`
+        const tipoNome = comando.dados.tipo === 'divida' ? 'dívida' : comando.dados.tipo === 'saida' ? 'gasto' : 'entrada'
+        const nomeItem = comando.dados.descricao || tipoRegistro
+        const categoria = comando.dados.categoria || 'outros'
+        let dataRegistro: Date
+        if (resultado.data?.data_registro) {
+          try {
+            dataRegistro = new Date(resultado.data.data_registro)
+            if (isNaN(dataRegistro.getTime())) {
+              dataRegistro = new Date()
+            }
+          } catch {
+            dataRegistro = new Date()
+          }
+        } else {
+          dataRegistro = new Date()
+        }
+        
+        try {
+          resposta = formatarRespostaRegistro(nomeItem, comando.dados.valor, dataRegistro, categoria, tipoNome)
+        } catch (error) {
+          console.error('❌ [PLEN] Erro ao formatar resposta:', error)
+          resposta = `✅ ${tipoRegistro} de R$ ${comando.dados.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} registrado com sucesso!`
+        }
         actionData = {
           action: 'created',
           message: `${tipoRegistro} registrado com sucesso!`
         }
       }
-    } else if (!resposta) {
-      // Gerar resposta usando IA ou processamento local (apenas se ainda não tiver resposta)
-      resposta = await gerarRespostaIA(message, contexto, conversationHistory || [])
+      
+        // GARANTIR que temos uma resposta após o registro
+        if (!resposta || resposta.trim() === '') {
+          console.error('❌ [PLEN] Resposta vazia após registro! Criando resposta de fallback.')
+          const tipoRegistro = comando.dados.tipo === 'divida' ? 'Dívida' : comando.dados.tipo === 'saida' ? 'Gasto' : 'Entrada'
+          resposta = `✅ ${tipoRegistro} de R$ ${comando.dados.valor?.toLocaleString('pt-BR', { minimumFractionDigits: 2 }) || '0,00'} registrado com sucesso!`
+        }
+      }
+    }
+    
+    // Se ainda não temos resposta, tentar gerar com IA
+    if (!resposta || resposta.trim() === '') {
+      console.log('🤖 [PLEN] Nenhuma resposta ainda, gerando com IA ou processamento local')
+      console.log('🔍 [PLEN] Comando tipo:', comando.tipo, 'Comando dados:', comando.dados)
+      
+      try {
+        resposta = await gerarRespostaIA(message, contexto, conversationHistory || [])
+        
+        // Se ainda não tiver resposta após IA, usar mensagem padrão
+        if (!resposta || resposta.trim() === '') {
+          console.log('⚠️ [PLEN] IA não retornou resposta, usando mensagem padrão')
+          resposta = 'Olá! Eu sou o PLEN, seu assistente financeiro. Como posso ajudá-lo hoje? Você pode registrar gastos, entradas ou consultar suas finanças.'
+        }
+      } catch (error) {
+        console.error('❌ [PLEN] Erro ao gerar resposta com IA:', error)
+        resposta = 'Olá! Eu sou o PLEN, seu assistente financeiro. Como posso ajudá-lo hoje? Você pode registrar gastos, entradas ou consultar suas finanças.'
+      }
       
       // Detectar se a resposta da IA pede confirmação
       const pedeConfirmacao = /(deseja|quer|gostaria|pode|confirma|confirmar|posso|você gostaria|deseja confirmar).*(confirmar|registrar|criar|adicionar|isso|essa entrada|esse registro)/i.test(resposta) ||
@@ -1457,17 +1632,38 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    // Garantir que sempre há uma resposta
+    if (!resposta || resposta.trim() === '') {
+      console.error('❌ [PLEN] Resposta vazia detectada! Usando mensagem padrão.')
+      resposta = 'Desculpe, não consegui processar sua mensagem. Por favor, tente novamente ou reformule sua pergunta.'
+    }
+    
+    console.log('✅ [PLEN] Retornando resposta:', {
+      respostaLength: resposta.length,
+      respostaPreview: resposta.substring(0, 100),
+      hasActionData: !!actionData,
+      hasPendingAction: !!pendingAction
+    })
+    
+    const responseJson = {
       response: resposta,
       actionData,
       pendingAction
-    })
+    }
+    
+    console.log('📤 [PLEN] Enviando resposta JSON:', JSON.stringify(responseJson).substring(0, 200))
+    
+    return NextResponse.json(responseJson)
   } catch (error: any) {
-    console.error('Erro no chat PLEN:', error)
-    return NextResponse.json(
-      { error: error.message || 'Erro ao processar mensagem' },
-      { status: 500 }
-    )
+    console.error('❌ [PLEN] Erro crítico no chat PLEN:', error)
+    console.error('❌ [PLEN] Stack trace:', error?.stack)
+    
+    // SEMPRE retornar uma resposta válida, mesmo em caso de erro
+    return NextResponse.json({
+      response: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
+      actionData: null,
+      pendingAction: null
+    })
   }
 }
 

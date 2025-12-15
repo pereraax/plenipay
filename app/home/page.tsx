@@ -10,6 +10,8 @@ import AvisosAdmin from '@/components/AvisosAdmin'
 import AvisoEmailNaoConfirmado from '@/components/AvisoEmailNaoConfirmado'
 import EmailConfirmadoSucessoWrapper from '@/components/EmailConfirmadoSucessoWrapper'
 import Logo from '@/components/Logo'
+import FiltroRapidoDataWrapper, { FiltroDataProvider } from '@/components/FiltroRapidoDataWrapper'
+import ReceitasDespesasDonut from '@/components/ReceitasDespesasDonut'
 import { Suspense } from 'react'
 
 // Otimizar: cache de 60 segundos para melhor performance
@@ -19,10 +21,11 @@ export const revalidate = 60
 
 export default async function HomePage() {
   return (
-    <div className="min-h-screen bg-brand-clean dark:bg-brand-midnight">
-      <Sidebar />
-      <main className="lg:ml-64 p-3 sm:p-4 lg:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
-        <div className="max-w-7xl mx-auto">
+    <FiltroDataProvider>
+      <div className="min-h-screen bg-brand-clean dark:bg-brand-midnight">
+        <Sidebar />
+        <main className="lg:ml-64 p-3 sm:p-4 lg:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
+          <div className="max-w-7xl mx-auto">
           {/* Logotipo centralizado acima do header */}
           <div className="flex justify-center mb-2 lg:hidden">
             <div className="w-40 sm:w-52">
@@ -47,9 +50,6 @@ export default async function HomePage() {
           {/* Avisos Administrativos (Popup) */}
           <AvisosAdmin />
 
-          {/* Banner de Informações e Dicas */}
-          <BannerInformacoes />
-
           {/* Aviso de Email Não Confirmado */}
           <AvisoEmailNaoConfirmado />
 
@@ -59,10 +59,28 @@ export default async function HomePage() {
           {/* Dashboard Horizontal - ATUALIZA AUTOMATICAMENTE A CADA 10 SEGUNDOS */}
           <DashboardHorizontalWrapper />
 
+          {/* Gráfico de Donut - Receitas x Despesas */}
+          <div className="mb-6">
+            <ReceitasDespesasDonut />
+          </div>
+
+          {/* Banner e Dicas - Lado a lado */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-0">
+            {/* Coluna Esquerda - Banner */}
+            <div className="lg:col-span-2">
+              <BannerInformacoes />
+            </div>
+
+            {/* Coluna Direita - Suporte e Dicas */}
+            <div className="lg:col-span-1">
+              <SupportPanel />
+            </div>
+          </div>
+
           {/* Conteúdo Principal - SEMPRE VISÍVEL, mas desabilitado se email não confirmado */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" style={{ marginTop: '-220px' }}>
             {/* Coluna Esquerda - Ações Rápidas */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <QuickActionCard
                   title="NOVO REGISTRO"
@@ -97,14 +115,14 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Coluna Direita - Suporte e Dicas */}
+            {/* Coluna Direita - Vazia (já tem o SupportPanel acima) */}
             <div className="lg:col-span-1">
-              <SupportPanel />
             </div>
           </div>
         </div>
       </main>
     </div>
+    </FiltroDataProvider>
   )
 }
 

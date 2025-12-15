@@ -192,7 +192,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
           className="flex items-center gap-2 px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-brand-aqua to-blue-500 text-white rounded-lg sm:rounded-xl hover:shadow-lg transition-smooth font-semibold text-sm sm:text-base w-full sm:w-auto justify-center"
         >
           <Plus size={18} className="sm:w-5 sm:h-5" />
-          <span>Nova Meta</span>
+          <span className="font-bold">Nova Meta</span>
         </button>
       </div>
 
@@ -201,7 +201,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
         <div className="mb-6 sm:mb-8">
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <TrendingUp className="text-brand-aqua sm:w-6 sm:h-6" size={20} />
-            <h2 className="text-xl sm:text-2xl font-display font-bold text-brand-clean">
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 dark:text-brand-clean">
               Metas Ativas
             </h2>
             <span className="px-2 sm:px-3 py-1 bg-brand-aqua/20 text-brand-aqua rounded-full text-xs sm:text-sm font-semibold">
@@ -221,7 +221,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                       handleVerMeta(meta.id)
                     }
                   }}
-                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-brand-aqua/50 cursor-pointer transition-smooth hover:shadow-xl hover:scale-[1.02] relative"
+                  className="bg-white dark:bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 dark:border-white/20 hover:border-brand-aqua/50 cursor-pointer transition-smooth hover:shadow-xl hover:scale-[1.02] relative shadow-md dark:shadow-none"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -229,10 +229,10 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                         <Icon size={24} className="text-brand-aqua" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-brand-clean">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-brand-clean">
                           {meta.nome}
                         </h3>
-                        <p className="text-sm text-brand-clean/60">
+                        <p className="text-sm text-gray-600 dark:text-brand-clean/60">
                           {meta.periodicidade === 'diario' ? 'Diário' : 
                            meta.periodicidade === 'semanal' ? 'Semanal' : 'Mensal'}
                         </p>
@@ -248,7 +248,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                         className="menu-button p-2 hover:bg-white/10 rounded-lg transition-smooth"
                         title="Opções"
                       >
-                        <MoreVertical size={20} className="text-brand-clean/70" />
+                        <MoreVertical size={20} className="text-gray-600 dark:text-brand-clean/70" />
                       </button>
                       {menuAberto === meta.id && (
                         <>
@@ -297,12 +297,12 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                   
                   <div className="mb-4">
                     <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm text-brand-clean/70">Progresso</span>
+                      <span className="text-sm text-gray-600 dark:text-brand-clean/70">Progresso</span>
                       <span className="text-sm font-bold text-brand-aqua">
                         {((meta.valor_acumulado || 0) / (meta.meta_total || 1) * 100).toFixed(0)}%
                       </span>
                     </div>
-                    <div className="w-full bg-brand-midnight/50 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-gray-200 dark:bg-brand-midnight/50 rounded-full h-3 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 rounded-full transition-all duration-500 shadow-lg shadow-blue-500/50"
                         style={{
@@ -313,10 +313,10 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                   </div>
                   
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-brand-clean/70">
+                    <span className="text-gray-600 dark:text-brand-clean/70">
                       R$ {(meta.valor_acumulado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <span className="text-brand-clean font-semibold">
+                    <span className="text-gray-900 dark:text-brand-clean font-semibold">
                       de R$ {(meta.meta_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -332,7 +332,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
         <div>
           <div className="flex items-center gap-2 mb-3 sm:mb-4">
             <Trophy className="text-yellow-400 sm:w-6 sm:h-6" size={20} />
-            <h2 className="text-xl sm:text-2xl font-display font-bold text-brand-clean">
+            <h2 className="text-xl sm:text-2xl font-display font-bold text-gray-900 dark:text-brand-clean">
               Metas Concluídas
             </h2>
             <span className="px-2 sm:px-3 py-1 bg-yellow-400/20 text-yellow-400 rounded-full text-xs sm:text-sm font-semibold">
@@ -352,7 +352,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                       handleVerMeta(meta.id)
                     }
                   }}
-                  className="bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-white/20 hover:border-yellow-400/50 cursor-pointer transition-smooth hover:shadow-xl hover:scale-[1.02] opacity-75 relative"
+                  className="bg-white dark:bg-white/10 backdrop-blur-lg rounded-2xl p-6 border border-gray-200 dark:border-white/20 hover:border-yellow-400/50 cursor-pointer transition-smooth hover:shadow-xl hover:scale-[1.02] opacity-75 relative shadow-md dark:shadow-none"
                 >
                   <div className="flex items-start justify-between mb-4">
                     <div className="flex items-center gap-3">
@@ -360,10 +360,10 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                         <Icon size={24} className="text-yellow-400" />
                       </div>
                       <div>
-                        <h3 className="text-lg font-bold text-brand-clean">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-brand-clean">
                           {meta.nome}
                         </h3>
-                        <p className="text-sm text-brand-clean/60">
+                        <p className="text-sm text-gray-600 dark:text-brand-clean/60">
                           Concluída
                         </p>
                       </div>
@@ -380,7 +380,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                           className="menu-button p-2 hover:bg-white/10 rounded-lg transition-smooth"
                           title="Opções"
                         >
-                          <MoreVertical size={20} className="text-brand-clean/70" />
+                          <MoreVertical size={20} className="text-gray-600 dark:text-brand-clean/70" />
                         </button>
                         {menuAberto === meta.id && (
                           <>
@@ -429,7 +429,7 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                   </div>
                   
                   <div className="mb-4">
-                    <div className="w-full bg-brand-midnight/50 rounded-full h-3 overflow-hidden">
+                    <div className="w-full bg-gray-200 dark:bg-brand-midnight/50 rounded-full h-3 overflow-hidden">
                       <div
                         className="h-full bg-gradient-to-r from-yellow-400 to-yellow-500 rounded-full"
                         style={{ width: '100%' }}
@@ -438,10 +438,10 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
                   </div>
                   
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-brand-clean/70">
+                    <span className="text-gray-600 dark:text-brand-clean/70">
                       R$ {(meta.valor_acumulado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
-                    <span className="text-brand-clean font-semibold">
+                    <span className="text-gray-900 dark:text-brand-clean font-semibold">
                       de R$ {(meta.meta_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                     </span>
                   </div>
@@ -458,10 +458,10 @@ export default function MinhasMetasView({ metas: metasIniciais = [] }: MinhasMet
           <div className="inline-flex items-center justify-center w-24 h-24 bg-brand-aqua/20 rounded-full mb-6">
             <Target size={48} className="text-brand-aqua" />
           </div>
-          <h3 className="text-2xl font-bold text-brand-clean mb-2">
+          <h3 className="text-2xl font-bold text-gray-900 dark:text-brand-clean mb-2">
             Nenhuma meta criada ainda
           </h3>
-          <p className="text-brand-clean/70 mb-6">
+          <p className="text-gray-600 dark:text-brand-clean/70 mb-6">
             Crie sua primeira meta e comece a economizar!
           </p>
           <button

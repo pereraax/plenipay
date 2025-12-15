@@ -9,7 +9,6 @@ import Link from 'next/link'
 import Image from 'next/image'
 import ModalConfirmarEmail from '@/components/ModalConfirmarEmail'
 import ModalLoginConcluido from '@/components/ModalLoginConcluido'
-import AnimatedBackground from '@/components/AnimatedBackground'
 import { createClient } from '@/lib/supabase/client'
 
 export default function CadastroPage() {
@@ -233,37 +232,48 @@ export default function CadastroPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden py-6 px-4">
-      <AnimatedBackground />
-      <div className="w-full max-w-md mx-auto relative z-10">
-        <div className="bg-brand-royal/50 backdrop-blur-sm rounded-3xl p-6 sm:p-8 border border-brand-aqua/20 shadow-2xl">
-          <Link
-            href="/planos"
-            className="inline-flex items-center gap-2 text-brand-clean/70 hover:text-brand-aqua transition-smooth mb-6 -mt-2"
-          >
-            <ArrowLeft size={18} />
-            <span className="text-sm">Voltar para planos</span>
-          </Link>
-          <div className="text-center mb-6">
-            <Image 
-              src="/logo.png" 
-              alt="PLENIPAY" 
-              width={140}
-              height={32}
-              className="h-8 w-auto object-contain mx-auto mb-3"
-              priority
-            />
-            <h1 className="text-2xl sm:text-3xl font-display font-bold text-brand-white mb-2">
-              Criar Conta
-            </h1>
-            <p className="text-sm text-brand-clean/70">
-              Plano selecionado: <span className="text-brand-aqua font-semibold">{planosNomes[plano]}</span>
-            </p>
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-[#00C2FF] via-[#0099CC] to-[#007A99] relative overflow-hidden animate-gradient flex">
+      {/* Fundo dinâmico com animação */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+        <div className="absolute top-1/2 -right-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/15 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '5s' }}></div>
+        <div className="absolute -bottom-1/2 left-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '3s', animationDuration: '6s' }}></div>
+      </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+      {/* Lado Esquerdo - Popup do Formulário */}
+      <div className="relative z-10 w-full md:w-1/2 flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-sm animate-scale-up">
+          <div className="p-5 sm:p-6">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-[#00C2FF] transition-colors mb-4"
+            >
+              <ArrowLeft size={18} />
+              <span className="text-xs">Voltar para início</span>
+            </Link>
+
+            <div className="mb-4 text-center">
+              <div className="flex justify-center mb-3">
+                <Image 
+                  src="/logo azul.png" 
+                  alt="PLENIPAY" 
+                  width={140}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                  priority
+                />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-[#0D1B2A] mb-1">
+                Criar Conta
+              </h1>
+              <p className="text-sm text-gray-600">
+                Plano selecionado: <span className="text-[#00C2FF] font-semibold">{planosNomes[plano]}</span>
+              </p>
+            </div>
+
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Nome Completo *
               </label>
               <input
@@ -271,13 +281,13 @@ export default function CadastroPage() {
                 required
                 value={formData.nome}
                 onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
-                className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-1 focus:ring-[#00C2FF]/20 transition-all"
                 placeholder="Seu nome completo"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Email *
               </label>
               <input
@@ -285,13 +295,13 @@ export default function CadastroPage() {
                 required
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-1 focus:ring-[#00C2FF]/20 transition-all"
                 placeholder="seu@email.com"
               />
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Senha *
               </label>
               <div className="relative">
@@ -300,54 +310,54 @@ export default function CadastroPage() {
                   required
                   value={formData.senha}
                   onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className={`w-full px-4 py-3 bg-brand-midnight/50 border rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none transition-smooth pr-12 ${
+                  className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-all pr-10 ${
                     formData.senha && !senhaValida
-                      ? 'border-red-500/50 focus:border-red-500'
+                      ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500/20'
                       : formData.senha && senhaValida
-                      ? 'border-green-500/50 focus:border-green-500'
-                      : 'border-brand-aqua/20 focus:border-brand-aqua'
+                      ? 'border-green-500 focus:border-green-500 focus:ring-1 focus:ring-green-500/20'
+                      : 'border-gray-300 focus:border-[#00C2FF] focus:ring-1 focus:ring-[#00C2FF]/20'
                   }`}
                   placeholder="Digite sua senha"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-clean/60 hover:text-brand-aqua transition-smooth"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#00C2FF] transition-colors"
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
               
-              {/* Lista de requisitos da senha */}
-              <div className="mt-2 p-3 bg-brand-midnight/30 rounded-lg border border-white/10">
-                <p className="text-xs font-semibold text-brand-clean mb-2">Requisitos da senha:</p>
-                <ul className="space-y-1 text-xs">
-                  <li className={`flex items-center gap-2 ${requisitosSenha.minimo ? 'text-green-400' : 'text-brand-clean/60'}`}>
-                    <span>{requisitosSenha.minimo ? '✓' : '○'}</span>
-                    <span>Pelo menos 8 caracteres</span>
+              {/* Lista de requisitos da senha - Compacta em grid */}
+              <div className="mt-1.5 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                <p className="text-xs font-semibold text-gray-700 mb-1.5">Requisitos da senha:</p>
+                <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+                  <li className={`flex items-center gap-1.5 text-xs list-none ${requisitosSenha.minimo ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="text-xs">{requisitosSenha.minimo ? '✓' : '○'}</span>
+                    <span>8+ caracteres</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${requisitosSenha.maiuscula ? 'text-green-400' : 'text-brand-clean/60'}`}>
-                    <span>{requisitosSenha.maiuscula ? '✓' : '○'}</span>
-                    <span>Uma letra maiúscula (A-Z)</span>
+                  <li className={`flex items-center gap-1.5 text-xs list-none ${requisitosSenha.maiuscula ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="text-xs">{requisitosSenha.maiuscula ? '✓' : '○'}</span>
+                    <span>Maiúscula (A-Z)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${requisitosSenha.minuscula ? 'text-green-400' : 'text-brand-clean/60'}`}>
-                    <span>{requisitosSenha.minuscula ? '✓' : '○'}</span>
-                    <span>Uma letra minúscula (a-z)</span>
+                  <li className={`flex items-center gap-1.5 text-xs list-none ${requisitosSenha.minuscula ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="text-xs">{requisitosSenha.minuscula ? '✓' : '○'}</span>
+                    <span>Minúscula (a-z)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${requisitosSenha.numero ? 'text-green-400' : 'text-brand-clean/60'}`}>
-                    <span>{requisitosSenha.numero ? '✓' : '○'}</span>
-                    <span>Um número (0-9)</span>
+                  <li className={`flex items-center gap-1.5 text-xs list-none ${requisitosSenha.numero ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="text-xs">{requisitosSenha.numero ? '✓' : '○'}</span>
+                    <span>Número (0-9)</span>
                   </li>
-                  <li className={`flex items-center gap-2 ${requisitosSenha.especial ? 'text-green-400' : 'text-brand-clean/60'}`}>
-                    <span>{requisitosSenha.especial ? '✓' : '○'}</span>
-                    <span>Um caractere especial (!@#$%...)</span>
+                  <li className={`flex items-center gap-1.5 text-xs list-none col-span-2 ${requisitosSenha.especial ? 'text-green-600' : 'text-gray-500'}`}>
+                    <span className="text-xs">{requisitosSenha.especial ? '✓' : '○'}</span>
+                    <span>Caractere especial (!@#$%...)</span>
                   </li>
-                </ul>
+                </div>
               </div>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 Confirmar Senha *
               </label>
               <input
@@ -355,31 +365,29 @@ export default function CadastroPage() {
                 required
                 value={formData.confirmarSenha}
                 onChange={(e) => setFormData({ ...formData, confirmarSenha: e.target.value })}
-                className={`w-full px-4 py-3 bg-brand-midnight/50 border-2 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none transition-smooth ${
+                className={`w-full px-3 py-2 bg-white border rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none transition-all ${
                   senhasNaoCoincidem
-                    ? 'border-red-500 focus:border-red-500'
+                    ? 'border-red-500 focus:border-red-500 focus:ring-1 focus:ring-red-500/20'
                     : senhasCoincidem
-                    ? 'border-green-500 focus:border-green-500'
-                    : 'border-brand-aqua/20 focus:border-brand-aqua'
+                    ? 'border-green-500 focus:border-green-500 focus:ring-1 focus:ring-green-500/20'
+                    : 'border-gray-300 focus:border-[#00C2FF] focus:ring-1 focus:ring-[#00C2FF]/20'
                 }`}
                 placeholder="Confirme sua senha"
               />
               {senhasNaoCoincidem && (
-                <div className="mt-3 p-4 bg-red-600/30 border-2 border-red-500 rounded-lg shadow-lg">
-                  <p className="text-base text-red-200 flex items-start gap-3 font-bold">
-                    <span className="text-xl flex-shrink-0">⚠️</span>
+                <div className="mt-1.5 p-2 bg-red-50 border border-red-500 rounded-lg">
+                  <p className="text-xs text-red-700 flex items-start gap-2 font-medium">
+                    <span className="text-sm flex-shrink-0">⚠️</span>
                     <span className="flex-1">
                       <strong>As senhas não coincidem!</strong>
-                      <br />
-                      <span className="text-sm font-normal opacity-90">Verifique se você digitou a mesma senha nos dois campos.</span>
                     </span>
                   </p>
                 </div>
               )}
               {senhasCoincidem && (
-                <div className="mt-3 p-3 bg-green-500/20 border-2 border-green-500/50 rounded-lg">
-                  <p className="text-sm text-green-300 flex items-center gap-2 font-semibold">
-                    <span className="text-lg">✓</span>
+                <div className="mt-1.5 p-2 bg-green-50 border border-green-500 rounded-lg">
+                  <p className="text-xs text-green-700 flex items-center gap-1.5 font-semibold">
+                    <span className="text-sm">✓</span>
                     <span>Senhas coincidem</span>
                   </p>
                 </div>
@@ -387,7 +395,7 @@ export default function CadastroPage() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
+              <label className="block text-xs font-medium text-gray-700 mb-1">
                 WhatsApp *
               </label>
               <input
@@ -399,7 +407,7 @@ export default function CadastroPage() {
                   setFormData({ ...formData, whatsapp: valorLimpo })
                 }}
                 maxLength={15}
-                className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
+                className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-1 focus:ring-[#00C2FF]/20 transition-all"
                 placeholder="(00) 00000-0000"
               />
             </div>
@@ -411,26 +419,39 @@ export default function CadastroPage() {
                 console.log('Botão clicado!')
                 // Não prevenir default aqui, deixar o form onSubmit fazer isso
               }}
-              className="w-full px-6 py-4 bg-brand-aqua text-brand-midnight rounded-xl font-semibold hover:bg-brand-aqua/90 transition-smooth shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full px-4 py-2.5 bg-[#00C2FF] text-white rounded-lg text-sm font-semibold hover:bg-[#0099CC] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed mt-2"
             >
               {loading ? 'Criando conta...' : 'Criar Conta'}
             </button>
 
-            <p className="text-center text-sm text-brand-clean/60">
+            <p className="text-center text-xs text-gray-500 leading-tight">
               Ao criar uma conta, você concorda com nossos{' '}
-              <Link href="/termos" className="text-brand-aqua hover:underline">Termos de Uso</Link>
+              <Link href="/termos" className="text-[#00C2FF] hover:underline">Termos</Link>
               {' '}e{' '}
-              <Link href="/privacidade" className="text-brand-aqua hover:underline">Política de Privacidade</Link>
+              <Link href="/privacidade" className="text-[#00C2FF] hover:underline">Política</Link>
             </p>
 
-            <p className="text-center text-sm text-brand-clean/60">
+            <p className="text-center text-xs text-gray-600">
               Já tem uma conta?{' '}
-              <Link href="/login" className="text-brand-aqua hover:underline font-medium">
+              <Link href="/login" className="text-[#00C2FF] hover:underline font-medium">
                 Fazer login
               </Link>
             </p>
           </form>
+          </div>
         </div>
+      </div>
+
+      {/* Lado Direito - Imagem */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        <Image
+          src="/banner cadastro.png"
+          alt="Banner PLENIPAY"
+          fill
+          className="object-cover"
+          priority
+          unoptimized
+        />
       </div>
 
       {/* Modal de Confirmação de Email - REMOVIDO: não aparece mais após cadastro */}

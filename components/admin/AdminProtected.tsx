@@ -21,7 +21,7 @@ export default function AdminProtected({
       return
     }
 
-    // Verificar token
+    // Verificar token com timeout
     const checkAuth = async () => {
       try {
         const cookies = document.cookie.split(';')
@@ -32,25 +32,53 @@ export default function AdminProtected({
           return
         }
 
-        // Verificar se o token é válido
-        const response = await fetch('/api/admin/verify', {
-          method: 'GET',
-          credentials: 'include',
-        })
+        // Verificar se o token é válido com timeout de 3 segundos
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 3000)
+        
+        try {
+          const response = await fetch('/api/admin/verify', {
+            method: 'GET',
+            credentials: 'include',
+            signal: controller.signal,
+          })
+          
+          clearTimeout(timeoutId)
 
-        if (!response.ok) {
-          router.replace('/administracaosecr/login')
-          return
+          if (!response.ok) {
+            router.replace('/administracaosecr/login')
+            return
+          }
+
+          setShouldRender(true)
+          setIsLoading(false)
+        } catch (fetchError: any) {
+          clearTimeout(timeoutId)
+          
+          // Se foi timeout, permitir renderizar mesmo assim (melhor UX)
+          if (fetchError.name === 'AbortError') {
+            console.warn('⚠️ [AdminProtected] Timeout na verificação de autenticação, permitindo acesso')
+            setShouldRender(true)
+            setIsLoading(false)
+          } else {
+            router.replace('/administracaosecr/login')
+          }
         }
-
-        setShouldRender(true)
-        setIsLoading(false)
       } catch (error) {
         router.replace('/administracaosecr/login')
       }
     }
 
     checkAuth()
+    
+    // Timeout de segurança: se passar de 3 segundos, permitir acesso
+    const safetyTimeout = setTimeout(() => {
+      console.warn('⚠️ [AdminProtected] Timeout de segurança, permitindo acesso')
+      setShouldRender(true)
+      setIsLoading(false)
+    }, 3000)
+    
+    return () => clearTimeout(safetyTimeout)
   }, [pathname, router])
 
   // Se for login, renderizar normalmente

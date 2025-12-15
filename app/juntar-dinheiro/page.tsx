@@ -53,9 +53,9 @@ export default function JuntarDinheiroPage({
   const metaId = searchParams?.meta
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-brand-midnight via-brand-royal to-brand-midnight dark:from-brand-midnight dark:via-brand-midnight dark:to-brand-midnight">
+    <div className="min-h-screen bg-gray-50 dark:bg-gradient-to-br dark:from-brand-midnight dark:via-brand-royal dark:to-brand-midnight">
       <Sidebar />
-      <main className="lg:ml-64 p-3 sm:p-4 md:p-8 dark:bg-brand-midnight pt-6 lg:pt-4">
+      <main className="lg:ml-64 p-3 sm:p-4 md:p-8 bg-gray-50 dark:bg-brand-midnight pt-6 lg:pt-4">
         <div className="max-w-7xl mx-auto">
           {/* Logotipo centralizado acima do header */}
           <div className="flex justify-center mb-2 lg:hidden">
@@ -68,7 +68,7 @@ export default function JuntarDinheiroPage({
           <div className="flex items-center justify-between gap-4 mb-4 sm:mb-6">
             <div className="flex items-center gap-3">
               <MenuButton />
-              <h1 className="text-2xl sm:text-3xl font-display font-bold text-brand-midnight dark:text-brand-clean leading-none">
+              <h1 className="text-2xl sm:text-3xl font-display font-bold text-gray-900 dark:text-brand-clean leading-none">
                 Juntar Dinheiro
               </h1>
             </div>

@@ -126,17 +126,17 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
   }
 
   return (
-    <div className="max-w-7xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       {/* Header */}
-      <div className="mb-8 animate-slide-down">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
+      <div className="mb-4 sm:mb-5 animate-slide-down">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
               onClick={() => router.push('/minhas-metas')}
-              className="p-2 hover:bg-white/10 rounded-lg transition-smooth"
+              className="p-1.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-lg transition-smooth"
               title="Voltar para Minhas Metas"
             >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-brand-clean">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-gray-900 dark:text-brand-clean">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
               </svg>
             </button>
@@ -144,8 +144,8 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
               <Image 
                 src="/porco-azul.png" 
                 alt="Porquinho azul" 
-                width={56} 
-                height={56}
+                width={40} 
+                height={40}
                 className="object-contain"
                 priority
                 unoptimized
@@ -153,10 +153,10 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
               />
             </div>
             <div>
-              <h1 className="text-3xl font-display font-bold text-brand-white">
+              <h1 className="text-xl sm:text-2xl font-display font-bold text-gray-900 dark:text-brand-white">
                 {metaAtiva ? metaAtiva.nome : 'Juntar Dinheiro'}
               </h1>
-              <p className="text-brand-clean text-sm">
+              <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm">
                 {metaAtiva ? 'Economize de forma divertida e gamificada!' : 'Economize de forma divertida e gamificada!'}
               </p>
             </div>
@@ -168,7 +168,7 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
               className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-brand-aqua to-blue-500 text-brand-midnight rounded-xl hover:shadow-xl transition-smooth font-medium"
             >
               <Plus size={20} />
-              <span>Nova Meta</span>
+              <span className="font-bold">Nova Meta</span>
             </button>
           )}
         </div>
@@ -176,18 +176,18 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
 
       {/* Se não houver meta ativa */}
       {!metaAtiva && (
-        <div className="bg-gradient-to-br from-brand-royal to-brand-midnight rounded-3xl p-12 text-center border-2 border-brand-aqua/30 shadow-2xl animate-fade-in">
+        <div className="bg-white dark:bg-gradient-to-br dark:from-brand-royal dark:to-brand-midnight rounded-3xl p-12 text-center border-2 border-gray-200 dark:border-brand-aqua/30 shadow-2xl animate-fade-in">
           <div className="flex justify-center mb-6">
             <div className="p-6 bg-gradient-to-br from-yellow-400 to-amber-500 rounded-full shadow-lg animate-bounce">
               <Sparkles size={48} className="text-white" />
             </div>
           </div>
           
-          <h2 className="text-3xl font-display font-bold text-brand-white mb-4">
+          <h2 className="text-3xl font-display font-bold text-gray-900 dark:text-brand-white mb-4">
             Comece Sua Jornada de Economia!
           </h2>
           
-          <p className="text-brand-clean text-lg mb-8 max-w-2xl mx-auto">
+          <p className="text-gray-600 dark:text-brand-clean text-lg mb-8 max-w-2xl mx-auto">
             Crie uma meta, escolha quando quer guardar dinheiro e ganhe prêmios surpresa 
             em cada depósito! Quanto mais você economiza, mais recompensas você ganha!
           </p>
@@ -196,7 +196,7 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
             onClick={() => setModalCriarAberto(true)}
             className="px-8 py-4 bg-gradient-to-r from-brand-aqua to-blue-500 text-brand-midnight rounded-xl hover:shadow-xl transition-smooth font-bold text-lg"
           >
-            <span className="flex items-center gap-3">
+            <span className="flex items-center gap-3 font-bold">
               <Target size={24} />
               Criar Minha Primeira Meta
             </span>
@@ -208,32 +208,32 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
       {metaAtiva && (
         <div className="space-y-6">
           {/* Informações da Meta Ativa - Centralizado e Bem Visível */}
-          <div className="bg-gradient-to-br from-brand-royal to-brand-midnight rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 border-2 border-brand-aqua/30 shadow-2xl animate-fade-in max-w-4xl mx-auto mb-5 sm:mb-6">
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-5 mb-4 sm:mb-5 md:mb-6">
-              <div className="flex items-center gap-3 sm:gap-4 md:gap-5 w-full sm:w-auto">
-                <div className="p-3 sm:p-4 md:p-5 bg-blue-500 rounded-xl sm:rounded-2xl shadow-lg flex-shrink-0">
+          <div className="bg-white dark:bg-gradient-to-br dark:from-brand-royal dark:to-brand-midnight rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border-2 border-gray-200 dark:border-brand-aqua/30 shadow-xl animate-fade-in max-w-3xl mx-auto mb-4 sm:mb-5">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
+                <div className="p-2 sm:p-3 bg-blue-500 rounded-lg sm:rounded-xl shadow-md flex-shrink-0">
                   {(() => {
                     const IconComponent = obterIconeMeta(metaAtiva)
-                    return <IconComponent size={28} className="sm:w-8 sm:h-8 md:w-10 md:h-10 text-white" />
+                    return <IconComponent size={20} className="sm:w-6 sm:h-6 md:w-7 md:h-7 text-white" />
                   })()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 sm:gap-3 md:gap-4 flex-wrap">
-                    <h2 className="text-xl sm:text-2xl md:text-3xl font-display font-bold text-brand-white mb-1 sm:mb-1.5 truncate">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl md:text-2xl font-display font-bold text-gray-900 dark:text-brand-white mb-0.5 truncate">
                       {metaAtiva.nome}
                     </h2>
                   </div>
-                  <p className="text-brand-clean flex items-center gap-2 sm:gap-2.5 text-sm sm:text-base md:text-lg">
-                    <Calendar size={16} className="sm:w-5 sm:h-5 md:w-6 md:h-6" />
+                  <p className="text-gray-600 dark:text-brand-clean flex items-center gap-1.5 text-xs sm:text-sm">
+                    <Calendar size={14} className="sm:w-4 sm:h-4" />
                     <span className="capitalize truncate">Periodicidade: {metaAtiva.periodicidade}</span>
                   </p>
                 </div>
               </div>
               
-              <div className="flex items-center gap-4">
+              <div className="flex items-center gap-3">
                 <div className="text-left sm:text-right w-full sm:w-auto">
-                  <p className="text-brand-clean text-sm sm:text-base md:text-lg mb-1 sm:mb-1.5">Progresso</p>
-                  <p className="text-3xl sm:text-4xl md:text-5xl font-bold text-brand-aqua">
+                  <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm mb-0.5 sm:mb-1">Progresso</p>
+                  <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-[#00C2FF]">
                     {metaAtiva.meta_total && metaAtiva.meta_total > 0 
                       ? (((metaAtiva.valor_acumulado || 0) / metaAtiva.meta_total) * 100).toFixed(1)
                       : '0.0'
@@ -251,7 +251,7 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
                     className="p-2 hover:bg-white/10 rounded-lg transition-colors"
                     title="Mais opções"
                   >
-                    <MoreVertical size={20} className="text-brand-clean/70" />
+                    <MoreVertical size={20} className="text-gray-600 dark:text-brand-clean/70" />
                   </button>
                   
                   {/* Dropdown Menu */}
@@ -291,12 +291,12 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
             </div>
 
             {/* Barra de Progresso - Grande, Visível e Organizada */}
-            <div className="mb-5 sm:mb-6 md:mb-7">
-              <div className="flex justify-between text-base sm:text-lg md:text-xl text-brand-clean mb-3 sm:mb-4 font-semibold">
+            <div className="mb-3 sm:mb-4">
+              <div className="flex justify-between text-sm sm:text-base text-gray-600 dark:text-brand-clean mb-2 font-semibold">
                 <span>R$ {(metaAtiva.valor_acumulado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                 <span>R$ {(metaAtiva.meta_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
-              <div className="w-full h-7 sm:h-8 md:h-9 bg-brand-midnight rounded-full overflow-hidden border-2 border-brand-aqua/20">
+              <div className="w-full h-5 sm:h-6 bg-gray-200 dark:bg-brand-midnight rounded-full overflow-hidden border-2 border-gray-300 dark:border-brand-aqua/20">
                 <div
                   className="h-full bg-gradient-to-r from-blue-400 via-cyan-400 to-blue-500 shadow-lg shadow-blue-500/50 transition-all duration-1000 ease-out flex items-center justify-end pr-2 relative overflow-hidden"
                   style={{ width: `${(metaAtiva.meta_total || 0) > 0 ? Math.min(((metaAtiva.valor_acumulado || 0) / (metaAtiva.meta_total || 1)) * 100, 100) : 0}%` }}
@@ -311,38 +311,38 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
             </div>
 
             {/* Estatísticas - Layout Vertical no Mobile, Horizontal no Desktop */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-5 md:gap-6">
-              <div className="bg-brand-midnight/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-brand-aqua/10 flex items-center gap-4 md:flex-col md:text-center">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4">
+              <div className="bg-gray-100 dark:bg-brand-midnight/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-brand-aqua/10 flex items-center gap-3 md:flex-col md:text-center">
                 <div className="flex-shrink-0">
-                  <Coins className="text-blue-400 sm:w-9 sm:h-9 md:w-10 md:h-10 md:mx-auto" size={32} />
+                  <Coins className="text-blue-400 sm:w-7 sm:h-7 md:w-8 md:h-8 md:mx-auto" size={24} />
                 </div>
                 <div className="flex-1 min-w-0 md:flex-none">
-                  <p className="text-brand-clean text-sm sm:text-base md:text-lg mb-1 sm:mb-2 font-semibold">Falta guardar</p>
-                  <p className="text-brand-white font-bold text-lg sm:text-xl md:text-2xl break-words leading-tight">
+                  <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm mb-0.5 sm:mb-1 font-semibold">Falta guardar</p>
+                  <p className="text-gray-900 dark:text-brand-white font-bold text-base sm:text-lg md:text-xl break-words leading-tight">
                     R$ {((metaAtiva.meta_total || 0) - (metaAtiva.valor_acumulado || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               
-              <div className="bg-brand-midnight/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-brand-aqua/10 flex items-center gap-4 md:flex-col md:text-center">
+              <div className="bg-gray-100 dark:bg-brand-midnight/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-brand-aqua/10 flex items-center gap-3 md:flex-col md:text-center">
                 <div className="flex-shrink-0">
-                  <TrendingUp className="text-green-400 sm:w-9 sm:h-9 md:w-10 md:h-10 md:mx-auto" size={32} />
+                  <TrendingUp className="text-green-400 sm:w-7 sm:h-7 md:w-8 md:h-8 md:mx-auto" size={24} />
                 </div>
                 <div className="flex-1 min-w-0 md:flex-none">
-                  <p className="text-brand-clean text-sm sm:text-base md:text-lg mb-1 sm:mb-2 font-semibold">Já guardado</p>
-                  <p className="text-brand-white font-bold text-lg sm:text-xl md:text-2xl break-words leading-tight">
+                  <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm mb-0.5 sm:mb-1 font-semibold">Já guardado</p>
+                  <p className="text-gray-900 dark:text-brand-white font-bold text-base sm:text-lg md:text-xl break-words leading-tight">
                     R$ {(metaAtiva.valor_acumulado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
               </div>
               
-              <div className="bg-brand-midnight/50 rounded-xl sm:rounded-2xl p-4 sm:p-5 md:p-6 border border-brand-aqua/10 flex items-center gap-4 md:flex-col md:text-center">
+              <div className="bg-gray-100 dark:bg-brand-midnight/50 rounded-lg sm:rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-brand-aqua/10 flex items-center gap-3 md:flex-col md:text-center">
                 <div className="flex-shrink-0">
-                  <Trophy className="text-yellow-400 sm:w-9 sm:h-9 md:w-10 md:h-10 md:mx-auto" size={32} />
+                  <Trophy className="text-yellow-400 sm:w-7 sm:h-7 md:w-8 md:h-8 md:mx-auto" size={24} />
                 </div>
                 <div className="flex-1 min-w-0 md:flex-none">
-                  <p className="text-brand-clean text-sm sm:text-base md:text-lg mb-1 sm:mb-2 font-semibold">Meta Total</p>
-                  <p className="text-brand-white font-bold text-lg sm:text-xl md:text-2xl break-words leading-tight">
+                  <p className="text-gray-600 dark:text-brand-clean text-xs sm:text-sm mb-0.5 sm:mb-1 font-semibold">Meta Total</p>
+                  <p className="text-gray-900 dark:text-brand-white font-bold text-base sm:text-lg md:text-xl break-words leading-tight">
                     R$ {(metaAtiva.meta_total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export default function JuntarDinheiroView({ metasIniciais = [], metaId }: Junta
       {/* Metas Concluídas */}
       {metasConcluidas.length > 0 && (
         <div className="mt-8 animate-slide-up">
-          <h3 className="text-xl font-display font-bold text-brand-white mb-4 flex items-center gap-2">
+          <h3 className="text-xl font-display font-bold text-gray-900 dark:text-brand-white mb-4 flex items-center gap-2">
             <Trophy className="text-yellow-400" size={24} />
             Metas Concluídas
           </h3>

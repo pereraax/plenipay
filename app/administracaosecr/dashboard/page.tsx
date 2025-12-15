@@ -1,5 +1,6 @@
 import { obterEstatisticasUsuarios } from '@/lib/admin-auth'
 import { Users, CreditCard, UserCheck, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
+import VisitorStats from '@/components/VisitorStats'
 
 export default async function AdminDashboardPage() {
   let stats: { data: any; error: null } | { data: null; error: string } | null = null
@@ -106,6 +107,11 @@ export default async function AdminDashboardPage() {
             </div>
           )
         })}
+      </div>
+
+      {/* Estatísticas de Tráfego */}
+      <div className="mb-6 lg:mb-8">
+        <VisitorStats />
       </div>
 
       <div className="bg-brand-royal rounded-2xl p-4 lg:p-6 shadow-lg border border-white/10">

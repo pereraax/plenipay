@@ -3,8 +3,11 @@
 import { useState, useEffect } from 'react'
 import { obterEstatisticas } from '@/lib/actions'
 import { TrendingUp, TrendingDown, DollarSign, CreditCard } from 'lucide-react'
+import { useFiltroData } from './FiltroRapidoDataWrapper'
+import FiltroRapidoData from './FiltroRapidoData'
 
 export default function DashboardHorizontalWrapper() {
+  const { dataInicio, dataFim } = useFiltroData()
   const [stats, setStats] = useState<{
     totalEntradas: number
     totalSaidas: number
@@ -15,7 +18,12 @@ export default function DashboardHorizontalWrapper() {
 
   const carregarEstatisticas = async () => {
     try {
-      const result = await obterEstatisticas()
+      // Debug temporário - remover depois
+      if (dataInicio || dataFim) {
+        console.log('🔍 Filtro ativo:', { dataInicio, dataFim })
+      }
+      
+      const result = await obterEstatisticas(dataInicio, dataFim)
       
       if (result.error) {
         // Em caso de erro, usar valores zero
@@ -61,7 +69,7 @@ export default function DashboardHorizontalWrapper() {
     }, 10000) // 10 segundos
 
     return () => clearInterval(interval)
-  }, [])
+  }, [dataInicio, dataFim]) // Recarregar quando os filtros de data mudarem
 
   // Valores padrão enquanto carrega
   const totalEntradas = stats?.totalEntradas ?? 0
@@ -109,13 +117,13 @@ export default function DashboardHorizontalWrapper() {
   ]
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
       {cards.map((card, index) => {
         const Icon = card.icon
         return (
           <div
             key={index}
-            className={`bg-brand-white dark:bg-brand-royal rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-brand-clean dark:border-white/10 ${card.bgColor} dark:bg-opacity-20 animate-fade-in transition-all duration-300 ${
+            className={`bg-brand-white dark:bg-brand-royal rounded-xl sm:rounded-2xl p-4 sm:p-6 shadow-lg border border-brand-clean dark:border-white/10 ${card.bgColor} dark:bg-opacity-20 animate-fade-in transition-all duration-300 relative ${
               loading ? 'opacity-50' : 'opacity-100'
             }`}
             style={{ animationDelay: `${index * 0.1}s` }}
@@ -132,6 +140,10 @@ export default function DashboardHorizontalWrapper() {
                   }`} 
                   strokeWidth={2.5} 
                 />
+              </div>
+              {/* Filtro rápido de data no canto superior direito - em todos os cards */}
+              <div className="absolute top-3 right-3">
+                <FiltroRapidoData />
               </div>
             </div>
             <p className="text-xs sm:text-sm text-brand-midnight dark:text-brand-clean mb-1 font-bold">
@@ -154,5 +166,6 @@ export default function DashboardHorizontalWrapper() {
     </div>
   )
 }
+
 
 

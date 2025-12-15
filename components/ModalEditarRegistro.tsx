@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Registro, User } from '@/lib/types'
 import { atualizarRegistro, obterUsuarios, obterRegistros } from '@/lib/actions'
-import { X, Plus, User as UserIcon, CreditCard, Wallet, Smartphone, UtensilsCrossed, Car, Home, ShoppingBag, Heart, GraduationCap, Briefcase, Gamepad2, Dumbbell, Plane, Trash2 } from 'lucide-react'
+import { X, Plus, User as UserIcon, CreditCard, Wallet, Smartphone, UtensilsCrossed, Car, Home, ShoppingBag, Heart, GraduationCap, Briefcase, Gamepad2, Dumbbell, Plane, Trash2, HelpCircle, Check } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { createNotification } from './NotificationBell'
 import ModalSelecionarUsuario from './ModalSelecionarUsuario'
@@ -27,6 +27,26 @@ export default function ModalEditarRegistro({
   const [usuarioSelecionado, setUsuarioSelecionado] = useState<User | null>(null)
   const [parcelas, setParcelas] = useState<Array<{ id?: string; valor: string; data: string; quantidade: string }>>([])
   const [parcelasRelacionadas, setParcelasRelacionadas] = useState<Registro[]>([])
+  const [showHelpNome, setShowHelpNome] = useState(false)
+  const [showHelpObservacao, setShowHelpObservacao] = useState(false)
+
+  // Fechar tooltips ao clicar fora
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement
+      if (!target.closest('.help-tooltip-container')) {
+        setShowHelpNome(false)
+        setShowHelpObservacao(false)
+      }
+    }
+
+    if (showHelpNome || showHelpObservacao) {
+      document.addEventListener('mousedown', handleClickOutside)
+      return () => {
+        document.removeEventListener('mousedown', handleClickOutside)
+      }
+    }
+  }, [showHelpNome, showHelpObservacao])
   const [formData, setFormData] = useState<{
     nome: string
     observacao: string
@@ -36,7 +56,7 @@ export default function ModalEditarRegistro({
     categoria: string
     metodo_pagamento: 'pix' | 'cartao' | 'dinheiro'
     parcelas_totais: string
-    parcelas_pagas: string
+    valor_parcelas: string
     data_registro: string
   }>({
     nome: '',
@@ -47,9 +67,10 @@ export default function ModalEditarRegistro({
     categoria: '',
     metodo_pagamento: 'dinheiro',
     parcelas_totais: '1',
-    parcelas_pagas: '0',
+    valor_parcelas: '',
     data_registro: '',
   })
+  const [temParcelas, setTemParcelas] = useState(false)
 
   const categorias = [
     { id: 'alimentacao', nome: 'Alimentação', icon: UtensilsCrossed },
@@ -152,6 +173,14 @@ export default function ModalEditarRegistro({
       // Limpar observação removendo o JSON do histórico
       const observacaoLimpa = limparObservacao(registro.observacao)
       
+      // Calcular valor das parcelas a partir de parcelas_pagas
+      const valorTotal = registro.valor
+      const parcelasTotais = registro.parcelas_totais || 1
+      const parcelasPagas = registro.parcelas_pagas || 0
+      const valorParcelas = parcelasTotais > 0 && parcelasPagas > 0
+        ? (valorTotal * parcelasPagas) / parcelasTotais
+        : 0
+      
       setFormData({
         nome: registro.nome.replace(/\s*-\s*Parcela\s*\d+.*$/i, '').trim(), // Remover " - Parcela X" do nome
         observacao: observacaoLimpa,
@@ -161,9 +190,10 @@ export default function ModalEditarRegistro({
         categoria: registro.categoria || '',
         metodo_pagamento: metodoPagamento as 'pix' | 'cartao' | 'dinheiro',
         parcelas_totais: registro.parcelas_totais.toString(),
-        parcelas_pagas: registro.parcelas_pagas.toString(),
+        valor_parcelas: valorParcelas > 0 ? formatarValorEmTempoReal(valorParcelas.toString()) : '',
         data_registro: new Date(registro.data_registro).toISOString().slice(0, 16),
       })
+      setTemParcelas(parcelasTotais > 1 || parcelasPagas > 0)
       setEtiquetas(registro.etiquetas?.filter((e: string) => !['pix', 'cartao', 'dinheiro'].includes(e)) || [])
       if (registro.user) {
         setUsuarioSelecionado(registro.user)
@@ -187,9 +217,10 @@ export default function ModalEditarRegistro({
         categoria: '',
         metodo_pagamento: 'dinheiro',
         parcelas_totais: '1',
-        parcelas_pagas: '0',
+        valor_parcelas: '',
         data_registro: new Date().toISOString().slice(0, 16),
       })
+      setTemParcelas(false)
       setEtiquetas([])
       setUsuarioSelecionado(null)
       setParcelas([])
@@ -346,7 +377,17 @@ export default function ModalEditarRegistro({
       const etiquetasFinais = [...etiquetas.filter(e => !['pix', 'cartao', 'dinheiro'].includes(e)), metodoPagamento]
       form.append('etiquetas', JSON.stringify(etiquetasFinais))
       form.append('parcelas_totais', parcelasTotaisParaSalvar)
-      form.append('parcelas_pagas', formData.parcelas_pagas)
+      if (!temParcelas) {
+        form.append('parcelas_pagas', '0')
+      } else {
+        // Converter valor das parcelas para número de parcelas pagas baseado no valor total
+        const valorParcelas = converterValorFormatadoParaNumero(formData.valor_parcelas)
+        const valorTotal = valorFinalParaSalvar
+        const parcelasPagas = valorTotal > 0 && valorParcelas > 0 
+          ? Math.round((valorParcelas / valorTotal) * parseInt(parcelasTotaisParaSalvar))
+          : 0
+        form.append('parcelas_pagas', Math.min(parcelasPagas, parseInt(parcelasTotaisParaSalvar)).toString())
+      }
       form.append('data_registro', dataRegistroParaSalvar)
 
       const result = await atualizarRegistro(registro.id, form)
@@ -372,8 +413,19 @@ export default function ModalEditarRegistro({
       const metodoPagamento = etiquetas.find(e => ['pix', 'cartao', 'dinheiro'].includes(e)) || formData.metodo_pagamento
       const etiquetasFinais = [...etiquetas.filter(e => !['pix', 'cartao', 'dinheiro'].includes(e)), metodoPagamento]
       form.append('etiquetas', JSON.stringify(etiquetasFinais))
-      form.append('parcelas_totais', formData.parcelas_totais)
-      form.append('parcelas_pagas', formData.parcelas_pagas)
+      if (!temParcelas) {
+        form.append('parcelas_totais', '1')
+        form.append('parcelas_pagas', '0')
+      } else {
+        form.append('parcelas_totais', formData.parcelas_totais)
+        // Converter valor das parcelas para número de parcelas pagas baseado no valor total
+        const valorParcelas = converterValorFormatadoParaNumero(formData.valor_parcelas)
+        const valorTotal = valorFinal
+        const parcelasPagas = valorTotal > 0 && valorParcelas > 0 
+          ? Math.round((valorParcelas / valorTotal) * parseInt(formData.parcelas_totais))
+          : 0
+        form.append('parcelas_pagas', Math.min(parcelasPagas, parseInt(formData.parcelas_totais)).toString())
+      }
       form.append('data_registro', new Date(formData.data_registro).toISOString())
 
       const result = await criarRegistro(form)
@@ -408,8 +460,37 @@ export default function ModalEditarRegistro({
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 min-h-0 bg-white/50 dark:bg-brand-midnight/60 overflow-hidden">
           <div className="flex-1 overflow-y-auto px-6 py-5 space-y-4">
           <div>
-            <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
-              Nome do registro *
+            <label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-brand-midnight dark:text-brand-clean">
+              <span>Nome do registro *</span>
+              <div className="relative help-tooltip-container flex items-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowHelpNome(!showHelpNome)
+                  }}
+                  className="p-0.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-smooth flex items-center justify-center"
+                >
+                  <HelpCircle size={14} className="text-gray-500 dark:text-brand-clean/60 hover:text-brand-aqua transition-colors" />
+                </button>
+                {showHelpNome && (
+                  <div 
+                    className="absolute left-0 top-5 z-50 w-64 p-3 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg shadow-lg text-xs text-gray-700 dark:text-brand-clean"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="font-semibold mb-1">Exemplos de nomes:</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-brand-clean/80">
+                      <li>Salário mensal</li>
+                      <li>Aluguel</li>
+                      <li>Supermercado</li>
+                      <li>Conta de luz</li>
+                      <li>Combustível</li>
+                      <li>Farmácia</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </label>
             <input
               type="text"
@@ -417,20 +498,47 @@ export default function ModalEditarRegistro({
               value={formData.nome}
               onChange={(e) => setFormData({ ...formData, nome: e.target.value })}
               className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50"
-              placeholder="Ex: Salário mensal, Aluguel, Supermercado, Conta de luz..."
+              placeholder="Ex: Salário, Aluguel, Supermercado..."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
-              Observação
+            <label className="flex items-center gap-2 mb-1.5 text-xs font-medium text-brand-midnight dark:text-brand-clean">
+              <span>Observação</span>
+              <div className="relative help-tooltip-container flex items-center">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    setShowHelpObservacao(!showHelpObservacao)
+                  }}
+                  className="p-0.5 hover:bg-gray-100 dark:hover:bg-white/10 rounded-full transition-smooth flex items-center justify-center"
+                >
+                  <HelpCircle size={14} className="text-gray-500 dark:text-brand-clean/60 hover:text-brand-aqua transition-colors" />
+                </button>
+                {showHelpObservacao && (
+                  <div 
+                    className="absolute left-0 top-5 z-50 w-72 p-3 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg shadow-lg text-xs text-gray-700 dark:text-brand-clean"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <p className="font-semibold mb-1">Adicione detalhes sobre este registro:</p>
+                    <ul className="list-disc list-inside space-y-1 text-gray-600 dark:text-brand-clean/80">
+                      <li>Pagamento da conta de luz do mês de novembro</li>
+                      <li>Compra de mantimentos para a semana</li>
+                      <li>Pagamento de mensalidade escolar</li>
+                      <li>Despesa com manutenção do carro</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
             </label>
             <textarea
               value={formData.observacao}
               onChange={(e) => setFormData({ ...formData, observacao: e.target.value })}
               rows={2}
               className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50 resize-none"
-              placeholder="Adicione detalhes sobre este registro. Ex: 'Pagamento da conta de luz do mês de novembro', 'Compra de mantimentos para a semana'..."
+              placeholder="Adicione detalhes sobre este registro..."
             />
           </div>
 
@@ -537,7 +645,7 @@ export default function ModalEditarRegistro({
             <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-2">
               Categoria
             </label>
-            <div className="grid grid-cols-5 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {categorias.map((cat) => {
                 const Icon = cat.icon
                 const isSelected = formData.categoria === cat.id
@@ -546,15 +654,15 @@ export default function ModalEditarRegistro({
                     key={cat.id}
                     type="button"
                     onClick={() => setFormData({ ...formData, categoria: isSelected ? '' : cat.id })}
-                    className={`flex flex-col items-center gap-1 px-2 py-2 rounded-lg font-medium transition-smooth text-xs overflow-hidden ${
+                    className={`flex flex-col items-center justify-center gap-2 px-2 py-3 rounded-lg font-medium transition-smooth min-h-[90px] ${
                       isSelected
                         ? 'bg-brand-aqua text-brand-midnight shadow-md'
                         : 'bg-gray-100 dark:bg-brand-midnight/50 text-brand-midnight dark:text-brand-clean border border-gray-200 dark:border-white/10 hover:bg-gray-200 dark:hover:bg-white/10'
                     }`}
                     title={cat.nome}
                   >
-                    <Icon size={18} strokeWidth={2} />
-                    <span className="text-[10px] leading-tight text-center break-words max-w-full px-1">{cat.nome}</span>
+                    <Icon size={24} strokeWidth={2.5} className="flex-shrink-0" />
+                    <span className="text-xs font-medium text-center leading-tight break-words w-full">{cat.nome}</span>
                   </button>
                 )
               })}
@@ -762,31 +870,104 @@ export default function ModalEditarRegistro({
 
           {/* Campos de parcelas tradicionais - Mostrar apenas se NÃO for dívida ou se não tiver parcelas relacionadas */}
           {(!registro || registro.tipo !== 'divida' || parcelas.length === 0) && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
-                  Parcelas totais
+            <div className="space-y-3">
+              <div className="flex items-center gap-3">
+                <label className="flex items-center gap-3 cursor-pointer group">
+                  <div className="relative">
+                    <input
+                      type="checkbox"
+                      checked={temParcelas}
+                      onChange={(e) => {
+                        setTemParcelas(e.target.checked)
+                        if (!e.target.checked) {
+                          // Ao desativar parcelas, resetar valores
+                          setFormData({ ...formData, parcelas_totais: '1', valor_parcelas: '' })
+                        }
+                      }}
+                      className="sr-only"
+                    />
+                    <div
+                      className={`
+                        w-5 h-5 rounded-lg border-2 transition-all duration-300 flex items-center justify-center
+                        ${temParcelas
+                          ? 'bg-gradient-to-br from-brand-aqua to-brand-blue border-brand-aqua shadow-lg shadow-brand-aqua/30'
+                          : 'bg-white dark:bg-brand-midnight border-gray-300 dark:border-white/20 group-hover:border-brand-aqua/50 group-hover:bg-brand-aqua/5 dark:group-hover:bg-brand-aqua/10'
+                        }
+                      `}
+                    >
+                      {temParcelas && (
+                        <Check
+                          size={14}
+                          className="text-white dark:text-brand-midnight font-bold"
+                          strokeWidth={3}
+                        />
+                      )}
+                    </div>
+                  </div>
+                  <span className={`
+                    text-xs font-medium transition-colors duration-200
+                    ${temParcelas
+                      ? 'text-brand-aqua dark:text-brand-aqua'
+                      : 'text-brand-midnight dark:text-brand-clean'
+                    }
+                  `}>
+                    Esse registro tem parcelas?
+                  </span>
                 </label>
-                <input
-                  type="number"
-                  min="1"
-                  value={formData.parcelas_totais}
-                  onChange={(e) => setFormData({ ...formData, parcelas_totais: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50"
-                />
               </div>
-              <div>
-                <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
-                  Parcelas pagas
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.parcelas_pagas}
-                  onChange={(e) => setFormData({ ...formData, parcelas_pagas: e.target.value })}
-                  className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50"
-                />
-              </div>
+
+              {temParcelas && (
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
+                      Parcelas totais
+                    </label>
+                    <input
+                      type="number"
+                      min="1"
+                      value={formData.parcelas_totais}
+                      onChange={(e) => setFormData({ ...formData, parcelas_totais: e.target.value })}
+                      className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-brand-midnight dark:text-brand-clean mb-1.5">
+                      Valor das parcelas
+                    </label>
+                    <input
+                      type="text"
+                      value={formData.valor_parcelas}
+                      onChange={(e) => {
+                        const formatted = formatarValorEmTempoReal(e.target.value)
+                        setFormData({ ...formData, valor_parcelas: formatted })
+                      }}
+                      placeholder="0,00"
+                      className="w-full px-3 py-2 bg-white dark:bg-brand-midnight border border-gray-300 dark:border-white/10 rounded-lg focus:outline-none focus:border-brand-aqua transition-smooth text-brand-midnight dark:text-brand-clean text-sm placeholder-gray-400 dark:placeholder-brand-clean/50"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {temParcelas && parseInt(formData.parcelas_totais) > 1 && formData.valor_parcelas && (
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+                  <p className="text-xs text-blue-700 dark:text-blue-300">
+                    <strong>Valor informado:</strong> R$ {formData.valor_parcelas}
+                    {(() => {
+                      const valorParcelas = converterValorFormatadoParaNumero(formData.valor_parcelas)
+                      const valorTotal = converterValorFormatadoParaNumero(formData.valor)
+                      const parcelasPagas = valorTotal > 0 && valorParcelas > 0 
+                        ? Math.round((valorParcelas / valorTotal) * parseInt(formData.parcelas_totais))
+                        : 0
+                      const parcelasRestantes = parseInt(formData.parcelas_totais) - parcelasPagas
+                      return parcelasRestantes > 0 ? (
+                        <span>
+                          {' '}• Faltam {parcelasRestantes} parcelas
+                        </span>
+                      ) : null
+                    })()}
+                  </p>
+                </div>
+              )}
             </div>
           )}
 

@@ -7,7 +7,6 @@ import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
-import AnimatedBackground from '@/components/AnimatedBackground'
 import ModalEmailConfirmadoSucesso from '@/components/ModalEmailConfirmadoSucesso'
 import ModalLoginConcluido from '@/components/ModalLoginConcluido'
 
@@ -18,10 +17,29 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [showModalLoginConcluido, setShowModalLoginConcluido] = useState(false)
+  const [isDarkMode, setIsDarkMode] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     senha: '',
   })
+
+  // Detectar modo escuro/claro
+  useEffect(() => {
+    const checkDarkMode = () => {
+      const isDark = document.documentElement.classList.contains('dark')
+      setIsDarkMode(isDark)
+    }
+    
+    checkDarkMode()
+    
+    const observer = new MutationObserver(checkDarkMode)
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ['class']
+    })
+    
+    return () => observer.disconnect()
+  }, [])
 
   // Mostrar mensagem da URL se existir (vindo do cadastro)
   useEffect(() => {
@@ -247,105 +265,135 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4" style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <AnimatedBackground />
-      <div className="w-full max-w-md relative z-10" style={{ position: 'relative', zIndex: 10 }}>
-        <Link
-          href="/"
-          className="inline-flex items-center gap-2 text-brand-clean/70 hover:text-brand-aqua transition-smooth mb-6"
-        >
-          <ArrowLeft size={20} />
-          <span>Voltar para início</span>
-        </Link>
+    <div className="min-h-screen bg-gradient-to-br from-[#00C2FF] via-[#0099CC] to-[#007A99] relative overflow-hidden animate-gradient flex">
+      {/* Fundo dinâmico com animação */}
+      <div className="absolute inset-0 overflow-hidden">
+        <div className="absolute -top-1/2 -left-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/20 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDuration: '4s' }}></div>
+        <div className="absolute top-1/2 -right-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/15 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '1.5s', animationDuration: '5s' }}></div>
+        <div className="absolute -bottom-1/2 left-1/2 w-[200%] h-[200%] bg-gradient-to-br from-white/10 via-white/5 to-transparent rounded-full blur-3xl animate-pulse" style={{ animationDelay: '3s', animationDuration: '6s' }}></div>
+      </div>
 
-        <div className="bg-brand-royal/50 backdrop-blur-sm rounded-3xl p-8 border border-brand-aqua/20 shadow-2xl">
-          <div className="text-center mb-8">
-            <Image 
-              src="/logo.png" 
-              alt="PLENIPAY" 
-              width={140}
-              height={32}
-              className="h-8 w-auto object-contain mx-auto mb-4"
-              priority
-            />
-            <h1 className="text-3xl font-display font-bold text-brand-white mb-2">
-              Entrar
-            </h1>
-            <p className="text-brand-clean/70">
-              Acesse sua conta para continuar
-            </p>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {errorMessage && (
-              <div className="bg-red-500/20 border border-red-500/50 rounded-xl p-4">
-                <p className="text-sm text-red-400 font-medium">{errorMessage}</p>
-              </div>
-            )}
-            
-            <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
-                Email *
-              </label>
-              <input
-                type="email"
-                required
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth"
-                placeholder="seu@email.com"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-brand-clean mb-2">
-                Senha *
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  required
-                  value={formData.senha}
-                  onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
-                  className="w-full px-4 py-3 bg-brand-midnight/50 border border-brand-aqua/20 rounded-xl text-brand-white placeholder-brand-clean/40 focus:outline-none focus:border-brand-aqua transition-smooth pr-12"
-                  placeholder="Sua senha"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-clean/60 hover:text-brand-aqua transition-smooth"
-                >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-brand-clean/70">
-                <input type="checkbox" className="rounded" />
-                <span>Lembrar-me</span>
-              </label>
-              <Link href="#" className="text-sm text-brand-aqua hover:underline">
-                Esqueceu a senha?
-              </Link>
-            </div>
-
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full px-6 py-4 bg-brand-aqua text-brand-midnight rounded-xl font-semibold hover:bg-brand-aqua/90 transition-smooth shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed"
+      {/* Lado Esquerdo - Popup do Formulário */}
+      <div className="relative z-10 w-full md:w-1/2 flex items-center justify-center p-4 md:p-6 overflow-y-auto">
+        <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl border border-white/20 backdrop-blur-sm animate-scale-up">
+          <div className="p-5 sm:p-6">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-gray-600 hover:text-[#00C2FF] transition-colors mb-4"
             >
-              {loading ? 'Entrando...' : 'Entrar'}
-            </button>
+              <ArrowLeft size={18} />
+              <span className="text-xs">Voltar para início</span>
+            </Link>
 
-            <p className="text-center text-sm text-brand-clean/60">
-              Não tem uma conta?{' '}
-              <Link href="/planos" className="text-brand-aqua hover:underline font-medium">
-                Criar conta
-              </Link>
-            </p>
-          </form>
+            <div className="mb-6 text-center">
+              <div className="flex justify-center mb-4">
+                <Image 
+                  src={isDarkMode ? "/2 cores.png" : "/logo azul.png"} 
+                  alt="PLENIPAY" 
+                  width={140}
+                  height={32}
+                  className="h-8 w-auto object-contain"
+                  priority
+                />
+              </div>
+              <h1 className="text-2xl md:text-3xl font-display font-bold text-[#0D1B2A] mb-1">
+                Entrar
+              </h1>
+              <p className="text-sm text-gray-600">
+                Acesse sua conta para continuar
+              </p>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {errorMessage && (
+                <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                  <p className="text-xs text-red-600 font-medium">{errorMessage}</p>
+                </div>
+              )}
+              
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Email *
+                </label>
+                <input
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                  className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-2 focus:ring-[#00C2FF]/20 transition-all"
+                  placeholder="seu@email.com"
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-medium text-gray-700 mb-1.5">
+                  Senha *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={formData.senha}
+                    onChange={(e) => setFormData({ ...formData, senha: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-white border border-gray-300 rounded-lg text-sm text-gray-900 placeholder-gray-400 focus:outline-none focus:border-[#00C2FF] focus:ring-2 focus:ring-[#00C2FF]/20 transition-all pr-10"
+                    placeholder="Sua senha"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-[#00C2FF] transition-colors"
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2 text-xs text-gray-600">
+                  <input type="checkbox" className="rounded border-gray-300 text-[#00C2FF] focus:ring-[#00C2FF]" />
+                  <span>Lembrar-me</span>
+                </label>
+                <Link href="#" className="text-xs text-[#00C2FF] hover:underline font-medium">
+                  Esqueceu a senha?
+                </Link>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full px-4 py-2.5 bg-[#00C2FF] text-white rounded-lg text-sm font-semibold hover:bg-[#0099CC] transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? 'Entrando...' : 'Entrar'}
+              </button>
+
+              <p className="text-center text-xs text-gray-600">
+                Não tem uma conta?{' '}
+                <Link 
+                  href="/cadastro?plano=teste"
+                  className="text-[#00C2FF] hover:underline font-medium"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    router.push('/cadastro?plano=teste')
+                  }}
+                >
+                  Criar conta
+                </Link>
+              </p>
+            </form>
+          </div>
         </div>
+      </div>
+
+      {/* Lado Direito - Conteúdo Visual */}
+      <div className="hidden md:flex md:w-1/2 relative overflow-hidden">
+        <Image
+          src="/banner cadastro.png"
+          alt="Banner PLENIPAY"
+          fill
+          className="object-cover"
+          priority
+          unoptimized
+        />
       </div>
       
       {/* Popup de sucesso quando email foi confirmado via link */}

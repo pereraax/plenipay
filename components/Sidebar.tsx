@@ -12,7 +12,9 @@ import {
   Loader2,
   PiggyBank,
   PlayCircle,
-  Crown
+  Crown,
+  Clock,
+  Tag
 } from 'lucide-react'
 import Logo from './Logo'
 
@@ -20,9 +22,11 @@ const menuItems = [
   { href: '/home', label: 'Home', icon: Home, color: 'text-blue-600 dark:text-blue-400' },
   { href: '/registros', label: 'Todos os Registros', icon: FileText, color: 'text-green-600 dark:text-green-400' },
   { href: '/dividas', label: 'Dívidas', icon: CreditCard, color: 'text-red-600 dark:text-red-400' },
+  { href: '/lembretes', label: 'Lembretes', icon: Clock, color: 'text-orange-600 dark:text-orange-400' },
   { href: '/minhas-metas', label: 'Minhas Metas', icon: PiggyBank, color: 'text-yellow-600 dark:text-yellow-400' },
   { href: '/calendario', label: 'Calendário', icon: Calendar, color: 'text-purple-600 dark:text-purple-400' },
   { href: '/dashboard', label: 'Dashboard', icon: BarChart3, color: 'text-cyan-600 dark:text-cyan-400' },
+  { href: '/categorias', label: 'Categorias', icon: Tag, color: 'text-teal-600 dark:text-teal-400' },
   { href: '/tutoriais', label: 'Tutoriais', icon: PlayCircle, color: 'text-pink-600 dark:text-pink-400' },
   { href: '/configuracoes', label: 'Configurações', icon: Settings, color: 'text-gray-600 dark:text-gray-400' },
 ]
@@ -68,7 +72,7 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-brand-royal border-r border-gray-200 dark:border-brand-midnight shadow-lg z-50 hidden lg:block">
+    <aside className="fixed left-0 top-0 h-screen w-64 bg-white dark:bg-brand-royal border-r border-gray-200 dark:border-brand-midnight shadow-lg z-50 hidden lg:block overflow-y-auto">
       <div className="p-6">
         <div className="mb-6">
           <Logo />

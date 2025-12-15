@@ -42,7 +42,7 @@ export default async function ConfiguracoesPage({
             </div>
           </div>
 
-          <ConfiguracoesView tabAtivo={searchParams.tab || 'geral'} />
+          <ConfiguracoesView tabAtivo={searchParams.tab || 'perfil'} />
         </div>
       </main>
     </div>
