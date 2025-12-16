@@ -176,3 +176,11 @@ Se NADA funcionar, pode ser que o Supabase esteja bloqueando o envio por algum m
 **99% das vezes o problema é SMTP não configurado ou credenciais erradas!**
 
 
+
+
+
+
+
+
+
+

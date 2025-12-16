@@ -574,7 +574,7 @@ export default function FormularioRegistro() {
               categoria: '',
               metodo_pagamento: 'dinheiro',
               parcelas_totais: '1',
-              parcelas_pagas: '0',
+              valor_parcelas: '',
               data_registro: new Date().toISOString().slice(0, 16),
             })
             setEtiquetas([])

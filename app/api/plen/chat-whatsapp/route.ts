@@ -45,6 +45,10 @@ export async function POST(request: NextRequest) {
     const { createAdminClient } = await import('@/lib/supabase/server')
     const supabaseAdmin = createAdminClient()
     
+    if (!supabaseAdmin) {
+      return NextResponse.json({ error: 'Erro ao conectar com o banco de dados' }, { status: 500 })
+    }
+    
     // Buscar registros do accountOwnerId
     const { data: usuarios } = await supabaseAdmin
       .from('users')
@@ -83,18 +87,9 @@ export async function POST(request: NextRequest) {
     }
     
     // Processar mensagem com PLEN (usar mesma lógica do endpoint principal)
-    // Importar funções do PLEN
-    const { processarMensagemPLEN } = await import('@/lib/plen-processor')
-    
-    const resposta = await processarMensagemPLEN({
-      message,
-      conversationHistory: conversationHistory || [],
-      userId,
-      accountOwnerId,
-      dividas: dividas || [],
-      registros: registros || [],
-      estatisticas
-    })
+    // Por enquanto, retornar uma resposta simples até implementar a lógica completa
+    // TODO: Implementar processamento completo de mensagens PLEN aqui
+    const resposta = `Olá! Recebi sua mensagem: "${message}". Esta funcionalidade está em desenvolvimento. Por favor, use o endpoint principal /api/plen/chat para processar mensagens do PLEN.`
     
     return NextResponse.json({ response: resposta })
   } catch (error: any) {

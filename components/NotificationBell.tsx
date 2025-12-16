@@ -386,9 +386,9 @@ export default function NotificationBell() {
 }
 
 // Função helper para criar notificações
-export function createNotification(message: string, type: 'success' | 'info' | 'warning' = 'info') {
+export function createNotification(message: string, type: 'success' | 'info' | 'warning' | 'error' = 'info') {
   const event = new CustomEvent('notification', {
-    detail: { message, type }
+    detail: { message, type: type === 'error' ? 'warning' : type }
   })
   window.dispatchEvent(event)
 }

@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Obter número do WhatsApp conectado
-    const user = sock.user
+    const user = (sock as any).user
     const numero = user?.id?.split(':')[0] || null
 
     return NextResponse.json({
@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
 
 
 

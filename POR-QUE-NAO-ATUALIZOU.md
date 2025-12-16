@@ -257,3 +257,11 @@ Para eu te ajudar melhor, me diga:
 Com essas informações, posso te ajudar a resolver o problema específico! 🎯
 
 
+
+
+
+
+
+
+
+

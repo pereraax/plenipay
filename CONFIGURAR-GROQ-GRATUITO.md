@@ -1,163 +1,119 @@
-# ⚡ Configurar Groq - IA Gratuita e Super Rápida!
+# ✅ Configurar Groq (IA Gratuita)
 
-## 🎯 **Por que Groq?**
+## 🎯 Por Que Groq?
 
-Groq é a **MELHOR opção gratuita** para o PLEN porque:
-- ✅ **100% GRATUITO** - Sem custos, sem cartão de crédito
-- ⚡ **SUPER RÁPIDO** - Respostas em milissegundos (mais rápido que todas as outras!)
-- 🆓 **Sem limites rígidos** - Use à vontade
-- 🤖 **Modelos poderosos** - Llama 3.1, Mixtral
-- 🇧🇷 **Funciona bem em português**
+- ✅ **100% Gratuito** (com limites generosos)
+- ✅ **Muito Rápido** (inferência ultra-rápida)
+- ✅ **Suporta Visão** (análise de imagens)
+- ✅ **Fácil de Configurar**
 
 ---
 
-## 🚀 **PASSO A PASSO - Configurar Groq**
+## 🔧 Como Configurar
 
-### **Passo 1: Criar conta na Groq**
+### 1. **Obter API Key do Groq**
 
 1. Acesse: https://console.groq.com/
-2. Clique em **"Sign Up"** ou **"Log In"**
-3. Você pode fazer login com:
-   - Google
-   - GitHub
-   - Email
+2. Crie uma conta (gratuita)
+3. Vá em **API Keys**
+4. Clique em **Create API Key**
+5. Copie a chave gerada
 
-### **Passo 2: Criar API Key**
+### 2. **Adicionar ao .env.local**
 
-1. Depois de fazer login, vá em **"API Keys"** no menu lateral
-2. Clique em **"Create API Key"**
-3. Dê um nome para a chave (ex: "PLEN Assistente")
-4. **Copie a chave** imediatamente!
-   - Formato: `gsk_...`
-
-### **Passo 3: Adicionar ao .env.local**
-
-Adicione as seguintes variáveis ao arquivo `.env.local`:
-
-```env
-# Groq - GRATUITO E SUPER RÁPIDO ⚡
-AI_PROVIDER=groq
-GROQ_API_KEY=gsk_sua_chave_aqui
-
-# Opcional: escolher o modelo (padrão: llama-3.1-8b-instant)
-# Modelos disponíveis:
-# - llama-3.1-8b-instant (padrão - rápido e bom) ✅ RECOMENDADO
-# - llama-3.1-70b-versatile (mais poderoso)
-# - mixtral-8x7b-32768 (bom equilíbrio)
-GROQ_MODEL=llama-3.1-8b-instant
-```
-
-### **Passo 4: Reiniciar o servidor**
+Abra o arquivo `.env.local` e adicione:
 
 ```bash
-# Parar o servidor (Ctrl+C)
-# Depois iniciar novamente:
-npm run dev
+GROQ_API_KEY=sua_chave_aqui
+```
+
+**Exemplo:**
+```bash
+GROQ_API_KEY=gsk_abc123xyz456...
+```
+
+### 3. **Reiniciar o Servidor**
+
+```bash
+npx pm2 restart plen-server
 ```
 
 ---
 
-## 🎯 **Modelos Disponíveis**
+## ✅ O Que Foi Melhorado
 
-### **1. Llama 3.1 8B Instant** (Padrão - Recomendado)
-```env
-GROQ_MODEL=llama-3.1-8b-instant
+### 1. **Múltiplos Modelos**
+- ✅ Tenta `llama-3.2-90b-vision-preview` primeiro
+- ✅ Se falhar, tenta `llama-3.2-11b-vision-preview`
+- ✅ Se falhar, tenta `llama-3.1-70b-versatile`
+- ✅ Se falhar, tenta `llama-3.1-8b-instant`
+
+### 2. **Ordem de Prioridade**
+1. **Groq** (gratuito e rápido) ← **PRIMEIRO**
+2. Gemini (se Groq falhar)
+3. OpenAI (se ambos falharem)
+
+### 3. **Tratamento de Erros Melhorado**
+- ✅ Tenta cada modelo automaticamente
+- ✅ Logs detalhados de qual modelo funcionou
+- ✅ Fallback automático para próximo provedor
+
+---
+
+## 🧪 Como Testar
+
+### 1. **Configurar Groq API Key**
+Adicione `GROQ_API_KEY` no `.env.local`
+
+### 2. **Reiniciar Servidor**
+```bash
+npx pm2 restart plen-server
 ```
-- ✅ **Mais rápido**
-- ✅ **Gratuito**
-- ✅ **Ótima qualidade**
-- ✅ **Ideal para PLEN**
 
-### **2. Llama 3.1 70B Versatile** (Mais poderoso)
-```env
-GROQ_MODEL=llama-3.1-70b-versatile
+### 3. **Enviar uma Imagem pelo WhatsApp**
+Envie uma foto de comprovante de PIX ou compra.
+
+### 4. **Verificar os Logs**
+```bash
+npx pm2 logs plen-server
 ```
-- 🧠 Mais inteligente
-- ⚡ Ainda muito rápido
-- ✅ Gratuito
 
-### **3. Mixtral 8x7B** (Bom equilíbrio)
-```env
-GROQ_MODEL=mixtral-8x7b-32768
+Procure por:
 ```
-- 🎯 Equilíbrio entre velocidade e qualidade
-- ✅ Gratuito
-
----
-
-## 💰 **PREÇOS**
-
-### **Groq**
-- 💰 **GRATUITO** - Sem custos!
-- 🆓 Sem limites rígidos durante período gratuito
-- ✅ Ideal para projetos pessoais
-
----
-
-## ✅ **Testar a Configuração**
-
-1. Inicie o servidor: `npm run dev`
-2. Acesse o PLEN no sistema
-3. Faça uma pergunta como: "Quais são minhas dívidas?"
-4. Você vai notar que a resposta é **instantânea**! ⚡
-
----
-
-## 🔄 **Como o sistema funciona**
-
-O sistema está configurado para usar **Groq como padrão** quando configurado. A ordem de prioridade automática é:
-
-1. **Groq** (se `GROQ_API_KEY` estiver configurada) ⚡ GRATUITO
-2. **Gemini** (fallback, se disponível) 🆓 GRATUITO
-3. **Claude** (fallback, se disponível)
-4. **OpenAI** (fallback, se disponível)
-5. **Processamento local** (se nenhuma API funcionar)
-
----
-
-## 🐛 **Troubleshooting**
-
-### **Erro: "API key not found"**
-- Verifique se a chave está no `.env.local`
-- Certifique-se de que não há espaços extras
-- Reinicie o servidor após adicionar a chave
-
-### **Erro: "Model not found"**
-- Verifique se o nome do modelo está correto
-- Use os modelos listados acima
-
-### **Erro: "Rate limit exceeded"**
-- Raramente acontece no plano gratuito
-- Aguarde alguns minutos e tente novamente
-
----
-
-## 📝 **Exemplo de .env.local completo**
-
-```env
-# Supabase
-NEXT_PUBLIC_SUPABASE_URL=sua_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave
-
-# Groq - IA GRATUITA E SUPER RÁPIDA ⚡
-AI_PROVIDER=groq
-GROQ_API_KEY=gsk_sua_chave_aqui
-GROQ_MODEL=llama-3.1-8b-instant
+🔍 [Media Processor] Tentando processar com Groq...
+🔍 [Media Processor] Tentando modelo Groq: llama-3.2-90b-vision-preview
+✅ [Media Processor] Groq modelo llama-3.2-90b-vision-preview funcionou!
+✅ [Apifacil Webhook] Imagem processada com sucesso!
 ```
 
 ---
 
-## 🎉 **Vantagens do Groq**
+## 📋 Vantagens do Groq
 
-- ⚡ **Velocidade**: Respostas em milissegundos
-- 🆓 **Gratuito**: Sem custos
-- 🚀 **Performance**: Modelos poderosos
-- 🌍 **Português**: Funciona bem em português brasileiro
-- 📊 **Sem limites**: Use à vontade
+1. **Gratuito**: Sem custos, apenas limites de uso
+2. **Rápido**: Inferência em milissegundos
+3. **Confiável**: Infraestrutura robusta
+4. **Suporta Visão**: Análise de imagens nativa
 
 ---
 
-**🚀 Pronto! Seu PLEN agora está usando Groq - a IA gratuita mais rápida do mercado!**
+## 🔗 Links Úteis
+
+- **Console Groq**: https://console.groq.com/
+- **Documentação**: https://console.groq.com/docs
+- **API Keys**: https://console.groq.com/keys
+
+---
+
+## 💡 Próximos Passos
+
+1. **Obter API Key do Groq**
+2. **Adicionar ao .env.local**
+3. **Reiniciar servidor**
+4. **Testar enviando uma imagem**
+
+**Groq é gratuito e muito rápido! Configure agora!**
+
 
 
 

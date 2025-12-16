@@ -31,7 +31,6 @@ export async function POST(request: NextRequest) {
         qrCode: null,
         status: 'connected',
         connected: true,
-        message: result.message,
       })
     }
 

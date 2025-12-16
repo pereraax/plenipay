@@ -131,3 +131,11 @@ Se o deploy está falhando, pode ser por falta de variáveis:
 Com essas informações, posso identificar exatamente o problema e resolver! 🚀
 
 
+
+
+
+
+
+
+
+

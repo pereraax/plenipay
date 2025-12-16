@@ -533,7 +533,7 @@ export async function resetarTodosRegistros() {
   return { success: true }
 }
 
-export async function obterEstatisticas() {
+export async function obterEstatisticas(dataInicio?: string, dataFim?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
@@ -553,11 +553,27 @@ export async function obterEstatisticas() {
   
   const userIds = usuarios.map(u => u.id)
   
-  // Buscar registros onde user_id está na lista de usuários do account_owner
-  const { data: registros, error } = await supabase
+  // Construir query com filtros de data opcionais
+  let query = supabase
     .from('registros')
-    .select('tipo, valor, parcelas_totais, parcelas_pagas, user_id')
+    .select('tipo, valor, parcelas_totais, parcelas_pagas, user_id, data_registro')
     .in('user_id', userIds) // Filtrar por todos os usuários do account_owner
+  
+  // Aplicar filtros de data se fornecidos
+  // dataInicio e dataFim já vêm como ISO strings completas com hora
+  if (dataInicio) {
+    query = query.gte('data_registro', dataInicio)
+  }
+  if (dataFim) {
+    query = query.lte('data_registro', dataFim)
+  }
+  
+  const { data: registros, error } = await query
+  
+  // Debug temporário - remover depois
+  if (dataInicio || dataFim) {
+    console.log('📊 Registros encontrados:', registros?.length || 0, 'com filtro de data')
+  }
 
   if (error) {
     console.error('Erro ao buscar estatísticas:', error)
@@ -894,6 +910,114 @@ export async function coletarBauMeta(bauId: string, desconto: number) {
 
   revalidatePath('/minhas-metas')
   return { data }
+}
+
+// Criar baús automaticamente para uma meta usando valores determinísticos
+export async function criarBausAutomaticos(metaId: string, userId: string, metaTotal: number, valorMaxPorBau?: number, numBausTotal?: number) {
+  const supabase = await createClient()
+
+  // Verificar se já existem baús
+  const { data: bausExistentes } = await supabase
+    .from('baus_meta')
+    .select('id')
+    .eq('meta_id', metaId)
+    .limit(1)
+
+  if (bausExistentes && bausExistentes.length > 0) {
+    return { data: [], error: null } // Já existem baús
+  }
+
+  // Calcular valores
+  const valorMax = valorMaxPorBau || 150
+  const numBaus = numBausTotal || Math.ceil(metaTotal / valorMax)
+
+  // Gerar valores determinísticos baseados no metaId
+  const valores: number[] = []
+  let valorRestante = metaTotal
+
+  // Criar hash determinístico do metaId
+  let hash = 0
+  for (let i = 0; i < metaId.length; i++) {
+    const char = metaId.charCodeAt(i)
+    hash = ((hash << 5) - hash) + char
+    hash = hash & hash
+  }
+
+  // Gerador pseudo-aleatório determinístico
+  let seed = Math.abs(hash)
+  const random = () => {
+    seed = (seed * 9301 + 49297) % 233280
+    return seed / 233280
+  }
+
+  // Distribuir valores
+  for (let i = 0; i < numBaus - 1; i++) {
+    const minPorBau = Math.max(1, Math.floor((metaTotal / numBaus) * 0.1))
+    const maxPossivel = Math.min(
+      valorMax,
+      valorRestante - (numBaus - i - 1) * minPorBau
+    )
+    const min = Math.max(minPorBau, Math.min(5, metaTotal * 0.01))
+    const max = Math.max(min, maxPossivel)
+
+    if (max < min || valorRestante <= minPorBau * (numBaus - i - 1)) {
+      valores.push(minPorBau)
+      valorRestante -= minPorBau
+    } else {
+      const valor = random() * (max - min) + min
+      const valorArredondado = Math.max(minPorBau, Math.round(valor * 100) / 100)
+      valores.push(valorArredondado)
+      valorRestante -= valorArredondado
+    }
+
+    if (valorRestante < 0) {
+      valorRestante = 0
+      break
+    }
+  }
+
+  // Último baú recebe o restante
+  const ultimoValor = Math.max(1, Math.round(valorRestante * 100) / 100)
+  valores.push(ultimoValor)
+
+  // Ajustar para garantir que a soma seja exata
+  const somaAtual = valores.reduce((a, b) => a + b, 0)
+  const diferenca = metaTotal - somaAtual
+  if (Math.abs(diferenca) > 0.01) {
+    valores[valores.length - 1] = Math.max(1, valores[valores.length - 1] + diferenca)
+  }
+
+  // Criar baús no banco
+  const bausParaInserir = valores.map((valor, index) => ({
+    meta_id: metaId,
+    user_id: userId,
+    numero_bau: index + 1,
+    valor_original: Math.max(0.01, valor),
+    coletado: false
+  }))
+
+  const { data, error } = await supabase
+    .from('baus_meta')
+    .insert(bausParaInserir)
+    .select()
+
+  if (error) {
+    return { data: [], error: error.message }
+  }
+
+  // Atualizar meta com valores se necessário
+  if (!valorMaxPorBau || !numBausTotal) {
+    await supabase
+      .from('metas_cofrinho')
+      .update({
+        valor_max_por_bau: valorMax,
+        num_baus_total: numBaus
+      })
+      .eq('id', metaId)
+  }
+
+  revalidatePath('/minhas-metas')
+  return { data: data || [] }
 }
 
 export async function resetarMetaCofrinho(metaId: string) {

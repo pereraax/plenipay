@@ -117,3 +117,11 @@ Verifique os logs do Supabase:
 **99% das vezes o problema é o template usando `{{ .ConfirmationURL }}` ao invés de `{{ .Token }}`!**
 
 
+
+
+
+
+
+
+
+

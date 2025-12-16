@@ -102,3 +102,11 @@ O componente `PlenAssistant.tsx` agora:
    - Ao clicar, redireciona para `/configuracoes?tab=perfil`
 
 
+
+
+
+
+
+
+
+

@@ -83,7 +83,7 @@ export default function AdminWhatsAppPage() {
           message: data.error,
           error: data.error,
         })
-        createNotification(data.error, 'error')
+        createNotification(data.error, 'warning')
       } else {
         setStatus({
           connected: data.connected || false,
@@ -107,7 +107,7 @@ export default function AdminWhatsAppPage() {
         message: 'Erro ao verificar status',
         error: error.message || 'Erro desconhecido',
       })
-      createNotification('Erro ao verificar status. Verifique a conexão com o servidor.', 'error')
+      createNotification('Erro ao verificar status. Verifique a conexão com o servidor.', 'warning')
     }
   }
 
@@ -137,7 +137,7 @@ export default function AdminWhatsAppPage() {
         throw new Error(data.error || 'Erro ao limpar credenciais')
       }
     } catch (error: any) {
-      createNotification(error.message || 'Erro ao limpar credenciais', 'error')
+      createNotification(error.message || 'Erro ao limpar credenciais', 'warning')
     } finally {
       setLoading(false)
     }
@@ -184,7 +184,7 @@ export default function AdminWhatsAppPage() {
         message: error.message || 'Erro ao conectar WhatsApp',
         error: error.message,
       })
-      createNotification(error.message || 'Erro ao conectar WhatsApp', 'error')
+      createNotification(error.message || 'Erro ao conectar WhatsApp', 'warning')
       setLoading(false)
     }
   }
@@ -312,7 +312,7 @@ export default function AdminWhatsAppPage() {
           pollingAtivo = false
           if (checkInterval) clearInterval(checkInterval)
           setLoading(false)
-          createNotification('Erro ao verificar status. Tente novamente.', 'error')
+          createNotification('Erro ao verificar status. Tente novamente.', 'warning')
         } else {
           // Aumentar intervalo em caso de erro
           intervaloAtual = Math.min(intervaloAtual * 1.5, 10000)
@@ -424,7 +424,7 @@ export default function AdminWhatsAppPage() {
           aguardando = false
           if (checkInterval) clearTimeout(checkInterval)
           setLoading(false)
-          createNotification('Erro ao verificar conexão. Tente novamente.', 'error')
+          createNotification('Erro ao verificar conexão. Tente novamente.', 'warning')
         } else {
           // Continuar com intervalo aumentado
           if (checkInterval) clearTimeout(checkInterval)
@@ -468,7 +468,7 @@ export default function AdminWhatsAppPage() {
         throw new Error(data.error || 'Erro ao desconectar')
       }
     } catch (error: any) {
-      createNotification(error.message || 'Erro ao desconectar', 'error')
+      createNotification(error.message || 'Erro ao desconectar', 'warning')
     } finally {
       setLoading(false)
     }
@@ -768,7 +768,7 @@ export default function AdminWhatsAppPage() {
                       throw new Error(data.error || 'Erro ao reativar listeners')
                     }
                   } catch (error: any) {
-                    createNotification(error.message || 'Erro ao reativar listeners', 'error')
+                    createNotification(error.message || 'Erro ao reativar listeners', 'warning')
                   } finally {
                     setLoading(false)
                   }
@@ -815,7 +815,7 @@ export default function AdminWhatsAppPage() {
                       throw new Error(data.error || 'Erro ao reconectar')
                     }
                   } catch (error: any) {
-                    createNotification(error.message || 'Erro ao reconectar', 'error')
+                    createNotification(error.message || 'Erro ao reconectar', 'warning')
                   } finally {
                     setLoading(false)
                   }

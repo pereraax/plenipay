@@ -5,10 +5,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { 
-  startKeepAlive, 
-  stopKeepAlive, 
-  isKeepAliveActive,
-  getLastStatusCheck,
   checkInstanceStatus,
   isApifacilConfigured 
 } from '@/lib/whatsapp-apifacil'
@@ -18,8 +14,6 @@ import {
  */
 export async function GET() {
   try {
-    const active = isKeepAliveActive()
-    const lastCheck = getLastStatusCheck()
     const configured = isApifacilConfigured()
     
     let currentStatus = null
@@ -29,16 +23,14 @@ export async function GET() {
 
     return NextResponse.json({
       success: true,
-      keepAliveActive: active,
+      keepAliveActive: false, // TODO: Implementar keep-alive
       configured,
-      lastCheck,
+      lastCheck: null,
       currentStatus: currentStatus ? {
         connected: currentStatus.connected,
-        configured: currentStatus.configured,
+        configured: currentStatus.success,
       } : null,
-      message: active 
-        ? 'Keep-alive está ativo e monitorando a conexão'
-        : 'Keep-alive não está ativo. Use POST para iniciar.',
+      message: 'Keep-alive não está implementado. Configure via variáveis de ambiente.',
     })
   } catch (error: any) {
     console.error('❌ [Apifacil Keep-Alive] Erro:', error)
@@ -71,20 +63,17 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'start') {
-      const interval = intervalMinutes || 5 // Padrão: 5 minutos
-      startKeepAlive(interval)
-      
+      // TODO: Implementar keep-alive
       return NextResponse.json({
         success: true,
-        message: `Keep-alive iniciado (verificando a cada ${interval} minutos)`,
-        intervalMinutes: interval,
+        message: 'Keep-alive não está implementado. Configure via variáveis de ambiente.',
+        intervalMinutes: intervalMinutes || 5,
       })
     } else if (action === 'stop') {
-      stopKeepAlive()
-      
+      // TODO: Implementar parada do keep-alive
       return NextResponse.json({
         success: true,
-        message: 'Keep-alive parado',
+        message: 'Keep-alive não está implementado.',
       })
     } else {
       return NextResponse.json(

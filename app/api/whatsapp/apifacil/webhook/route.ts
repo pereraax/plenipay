@@ -63,12 +63,14 @@ const SENT_MESSAGE_CACHE_TTL = 30000 // 30 segundos
 // Limpar cache antigo periodicamente
 setInterval(() => {
   const now = Date.now()
-  for (const [key, timestamp] of processedMessages.entries()) {
+  const processedEntries = Array.from(processedMessages.entries())
+  for (const [key, timestamp] of processedEntries) {
     if (now - timestamp > MESSAGE_CACHE_TTL) {
       processedMessages.delete(key)
     }
   }
-  for (const [key, timestamp] of sentMessagesCache.entries()) {
+  const sentEntries = Array.from(sentMessagesCache.entries())
+  for (const [key, timestamp] of sentEntries) {
     if (now - timestamp > SENT_MESSAGE_CACHE_TTL) {
       sentMessagesCache.delete(key)
     }
@@ -307,7 +309,7 @@ export async function POST(request: NextRequest) {
                     // Se não conseguiu transcrever, usar caption se disponível
                     if (mediaInfo.caption) {
                       processedMediaText = mediaInfo.caption
-                      console.log('✅ [Apifacil Webhook] Usando caption como texto:', processedMediaText.substring(0, 100))
+                      console.log('✅ [Apifacil Webhook] Usando caption como texto:', processedMediaText?.substring(0, 100) || '')
                     }
                   }
                 } catch (audioError: any) {
@@ -315,7 +317,7 @@ export async function POST(request: NextRequest) {
                   // Se falhar, usar caption como fallback
                   if (mediaInfo.caption) {
                     processedMediaText = mediaInfo.caption
-                    console.log('✅ [Apifacil Webhook] Usando caption como fallback:', processedMediaText.substring(0, 100))
+                    console.log('✅ [Apifacil Webhook] Usando caption como fallback:', processedMediaText?.substring(0, 100) || '')
                   }
                 }
               } else {
@@ -323,7 +325,7 @@ export async function POST(request: NextRequest) {
                 // Para documentos, usar caption se disponível
                 if (mediaInfo.caption) {
                   processedMediaText = mediaInfo.caption
-                  console.log('✅ [Apifacil Webhook] Usando caption do documento:', processedMediaText.substring(0, 100))
+                    console.log('✅ [Apifacil Webhook] Usando caption do documento:', processedMediaText?.substring(0, 100) || '')
                 }
               }
             } else {
@@ -331,7 +333,7 @@ export async function POST(request: NextRequest) {
               // Se falhar ao baixar, usar caption como fallback
               if (mediaInfo.caption) {
                 processedMediaText = mediaInfo.caption
-                console.log('✅ [Apifacil Webhook] Usando caption como fallback:', processedMediaText.substring(0, 100))
+                console.log('✅ [Apifacil Webhook] Usando caption como fallback:', processedMediaText?.substring(0, 100) || '')
               }
             }
           } catch (error: any) {
@@ -340,7 +342,7 @@ export async function POST(request: NextRequest) {
             // Se falhar completamente, usar caption como fallback para não perder a mensagem
             if (mediaInfo.caption) {
               processedMediaText = mediaInfo.caption
-              console.log('✅ [Apifacil Webhook] Usando caption como fallback após erro:', processedMediaText.substring(0, 100))
+              console.log('✅ [Apifacil Webhook] Usando caption como fallback após erro:', processedMediaText?.substring(0, 100) || '')
             }
           }
         } else {
@@ -348,7 +350,7 @@ export async function POST(request: NextRequest) {
           // Se não tem URL mas tem caption, usar caption
           if (mediaInfo.caption) {
             processedMediaText = mediaInfo.caption
-            console.log('✅ [Apifacil Webhook] Usando caption da mídia:', processedMediaText.substring(0, 100))
+            console.log('✅ [Apifacil Webhook] Usando caption da mídia:', processedMediaText?.substring(0, 100) || '')
           }
         }
       } else {
@@ -806,7 +808,9 @@ export async function POST(request: NextRequest) {
     // Formato 2: Webhook direto (formato simples)
     else if (body.from || body.number || body.numero || body.phone || body.telefone) {
       phoneNumber = body.from || body.number || body.numero || body.phone || body.telefone
-      phoneNumber = phoneNumber.toString().replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace(/\D/g, '')
+      if (phoneNumber) {
+        phoneNumber = phoneNumber.toString().replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace(/\D/g, '')
+      }
       
       // CRÍTICO: Se processou mídia, SEMPRE usar o texto processado PRIMEIRO
       if (processedMediaText) {
@@ -858,7 +862,9 @@ export async function POST(request: NextRequest) {
     else if (body.data && (body.data.from || body.data.number || body.data.numero)) {
       const data = body.data
       phoneNumber = data.from || data.number || data.numero || data.phone || data.telefone
-      phoneNumber = phoneNumber.toString().replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace(/\D/g, '')
+      if (phoneNumber) {
+        phoneNumber = phoneNumber.toString().replace('@s.whatsapp.net', '').replace('@c.us', '').replace('@g.us', '').replace(/\D/g, '')
+      }
       
       // CRÍTICO: Se processou mídia, SEMPRE usar o texto processado PRIMEIRO
       if (processedMediaText) {
@@ -1334,7 +1340,7 @@ export async function POST(request: NextRequest) {
           sentMessagesCache.set(messageKey, now)
           
           // Limpar cache antigo
-          for (const [key, timestamp] of sentMessagesCache.entries()) {
+          for (const [key, timestamp] of Array.from(sentMessagesCache.entries())) {
             if (now - timestamp > SENT_MESSAGE_CACHE_TTL) {
               sentMessagesCache.delete(key)
             }

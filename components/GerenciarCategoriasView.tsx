@@ -417,9 +417,8 @@ export default function GerenciarCategoriasView() {
       {/* Modal Confirmar Exclusão */}
       {categoriaExcluindo && (
         <ModalConfirmacao
-          isOpen={!!categoriaExcluindo}
-          onClose={() => setCategoriaExcluindo(null)}
-          onConfirm={handleExcluirCategoria}
+          onConfirmar={handleExcluirCategoria}
+          onCancelar={() => setCategoriaExcluindo(null)}
           titulo="Excluir Categoria"
           mensagem={`Tem certeza que deseja excluir a categoria "${categoriaExcluindo.nome}"?`}
           textoConfirmar="Excluir"

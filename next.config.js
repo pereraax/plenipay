@@ -86,11 +86,52 @@ const nextConfig = {
       config.resolve.fallback = {
         ...config.resolve.fallback,
         fs: false,
+        net: false,
+        tls: false,
+        child_process: false,
+        dns: false,
+        'utf-8-validate': false,
+        'bufferutil': false,
+      }
+      
+      // No cliente, ignorar completamente whatsapp-web.js
+      config.resolve.alias = {
+        ...config.resolve.alias,
+        'whatsapp-web.js': false,
+      }
+    } else {
+      // No SERVIDOR, garantir que bufferutil e utf-8-validate funcionem
+      // Essas são dependências opcionais do ws que melhoram performance
+      config.resolve.fallback = {
+        ...config.resolve.fallback,
+        'utf-8-validate': require.resolve('utf-8-validate'),
+        'bufferutil': require.resolve('bufferutil'),
       }
     }
+    
+    // No servidor, marcar como externo (não bundlar, usar require direto)
+    if (isServer) {
+      config.externals = config.externals || []
+      config.externals.push(({ request }, callback) => {
+        // Se for whatsapp-web.js ou qualquer módulo dentro dele, marcar como externo
+        if (request === 'whatsapp-web.js' || request?.includes('whatsapp-web.js')) {
+          return callback(null, `commonjs ${request}`)
+        }
+        callback()
+      })
+    }
+    
+    // Ignorar avisos relacionados ao whatsapp-web.js
+    config.ignoreWarnings = [
+      ...(config.ignoreWarnings || []),
+      { module: /node_modules\/whatsapp-web\.js/ },
+      { message: /WAWebPollsVotesSchema/ },
+      { message: /Module not found.*whatsapp-web/ },
+      { message: /Can't resolve.*whatsapp-web/ },
+    ]
+    
     return config
   },
 }
 
 module.exports = nextConfig
-

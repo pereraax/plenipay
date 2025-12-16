@@ -3,7 +3,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { configureApifacil } from '@/lib/whatsapp-apifacil'
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,12 +15,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Configurar
-    configureApifacil(instanceId, token)
+    // TODO: Implementar configuração do Apifacil
+    // A configuração deve ser feita via variáveis de ambiente (APIFACIL_INSTANCE_ID e APIFACIL_TOKEN)
 
     return NextResponse.json({
       success: true,
-      message: 'Configuração salva com sucesso',
+      message: 'Configure APIFACIL_INSTANCE_ID e APIFACIL_TOKEN nas variáveis de ambiente do Vercel',
     })
   } catch (error: any) {
     console.error('❌ [Apifacil Config] Erro:', error)

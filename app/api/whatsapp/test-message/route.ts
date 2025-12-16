@@ -70,9 +70,10 @@ export async function POST(request: NextRequest) {
         
         // Tentar verificar se WhatsApp Web está carregado
         const whatsappLoaded = await client.pupPage.evaluate(() => {
+          const win = window as any
           return typeof window !== 'undefined' && 
-                 typeof window.Store !== 'undefined' && 
-                 typeof window.Store.Chat !== 'undefined'
+                 typeof win.Store !== 'undefined' && 
+                 typeof win.Store.Chat !== 'undefined'
         }).catch(() => false)
         
         diagnostic.whatsappWebLoaded = whatsappLoaded

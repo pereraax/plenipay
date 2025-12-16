@@ -55,31 +55,12 @@ export default function SupportPanel() {
 
   // Por enquanto, não vamos mostrar alertas de dívidas (precisa de server action)
   // Se precisar, podemos criar uma API route
-  const alert = null
+  // const alert: { title: string; content: string; color: string } | null = null
 
   return (
     <div className="space-y-4">
       {/* Alertas - só mostra se houver dívidas pendentes */}
-      {alert && (
-        <div className="bg-brand-white dark:bg-brand-royal rounded-2xl p-4 shadow-lg border border-brand-clean dark:border-white/10">
-          <h3 className="font-display font-bold text-brand-midnight dark:text-brand-clean mb-3 flex items-center gap-2">
-            <AlertCircle size={20} className="text-orange-600 dark:text-orange-400" />
-            Avisos Importantes
-          </h3>
-          <div className="space-y-2">
-            <div
-              className={`p-3 rounded-xl border ${alert.color} dark:bg-orange-900/20 dark:border-orange-800/30`}
-            >
-              <p className="text-sm font-medium text-brand-midnight dark:text-brand-clean mb-1">
-                {alert.title}
-              </p>
-              <p className="text-xs text-brand-midnight/70 dark:text-brand-clean/70">
-                {alert.content}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* TODO: Implementar alertas quando necessário */}
 
       {/* Dicas */}
       <div className="bg-brand-white dark:bg-brand-royal rounded-2xl p-4 shadow-lg border border-brand-clean dark:border-white/10">
