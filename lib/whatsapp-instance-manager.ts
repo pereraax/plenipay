@@ -183,7 +183,7 @@ export async function conectarInstancia(instanceName: string = 'plenipay', force
           qrCodeBase64 = await qrcode.toDataURL(qrCodeBase64, {
             errorCorrectionLevel: 'H', // Nível H (High) - melhor correção de erros
             type: 'image/png',
-            quality: 1.0, // Máxima qualidade
+            // Removido: quality não é válido para PNG
             margin: 4, // Margem maior
             width: 512, // Tamanho grande
             color: {
@@ -319,7 +319,7 @@ export async function conectarInstancia(instanceName: string = 'plenipay', force
 
       return {
         success: true,
-        connected: true,
+        // Removido: connected não existe no tipo de retorno
       }
     }
 

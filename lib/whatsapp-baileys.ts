@@ -784,7 +784,7 @@ export async function connectWhatsApp(forceNewQR = false) {
           console.log('⏳ [WhatsApp] Aguardando QR Code ser gerado pelo Baileys...')
           console.log('⏳ [WhatsApp] Debug: connection=connecting, hasQR=false, hasCreds=' + !!state.creds.me)
         }
-      } else if (connection === 'open' || (connection === 'connecting' && isOnline === true)) {
+      } else if (connection === 'open' || ((connection as any) === 'connecting' && isOnline === true)) {
         // CRÍTICO: Verificar se realmente está conectado
         // O Baileys pode enviar connection='open' mas ainda não ter user definido
         const hasUser = !!sock?.user
@@ -1571,7 +1571,7 @@ export async function connectWhatsAppViaPhone(phoneNumber: string): Promise<{ su
       if (update.pairingCode) {
         pairingCode = update.pairingCode
         console.log('✅ [WhatsApp Phone] Pairing code recebido via evento:', pairingCode)
-        if (pairingCodePromiseResolve) {
+        if (pairingCodePromiseResolve && pairingCode) {
           pairingCodePromiseResolve(pairingCode)
           // Remover listener após receber
           sock?.ev.off('connection.update', connectionHandler)
