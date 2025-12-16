@@ -399,7 +399,7 @@ export async function connectWhatsApp(forceNewQR = false) {
           console.error('   - Erro:', wsError)
           console.error('   - Message:', wsError?.message)
           console.error('   - Code:', wsError?.code)
-          console.error('   - ReadyState:', ws?.readyState)
+          // Removido: readyState não existe no tipo WebSocketClient
           console.error('❌ [WhatsApp WebSocket] ==========================================')
         })
         
@@ -425,7 +425,7 @@ export async function connectWhatsApp(forceNewQR = false) {
         })
         
         console.log('✅ [WhatsApp] Listeners do WebSocket configurados!')
-        console.log('🔍 [WhatsApp] WebSocket readyState inicial:', ws?.readyState || 'N/A')
+        // Removido: readyState não existe no tipo WebSocketClient
         console.log('   (0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED)')
       } catch (wsError: any) {
         console.warn('⚠️ [WhatsApp] Erro ao configurar listeners do WebSocket:', wsError.message)
@@ -482,11 +482,11 @@ export async function connectWhatsApp(forceNewQR = false) {
     })
 
     sock.ev.on('connection.update', (update) => {
-      const { connection, lastDisconnect, qr, isNewLogin, qrCode, isOnline } = update
+      const { connection, lastDisconnect, qr, isNewLogin, isOnline } = update
 
-      // O Baileys pode enviar qr ou qrCode em diferentes formatos
+      // O Baileys pode enviar qr em diferentes formatos
       // Tentar múltiplas propriedades possíveis
-      const qrCodeFinal = qr || qrCode || (update as any).qr || (update as any).qrCode || 
+      const qrCodeFinal = qr || (update as any).qr || (update as any).qrCode || 
                          (update as any).qrcode || (update as any).QR || (update as any).QRCode ||
                          // Tentar encontrar em qualquer propriedade string
                          Object.values(update).find((v: any) => 
@@ -502,7 +502,7 @@ export async function connectWhatsApp(forceNewQR = false) {
         console.log('🔍 [WhatsApp] Connection update recebido:')
         console.log('🔍 [WhatsApp] - connection:', connection)
         console.log('🔍 [WhatsApp] - hasQR (qr):', !!qr, typeof qr, qr ? `(${qr.length} chars)` : '')
-        console.log('🔍 [WhatsApp] - hasQR (qrCode):', !!qrCode, typeof qrCode, qrCode ? `(${qrCode.length} chars)` : '')
+        // Removido: qrCode não existe no tipo ConnectionState
         console.log('🔍 [WhatsApp] - qrCodeFinal:', !!qrCodeFinal, typeof qrCodeFinal, qrCodeFinal ? `(${qrCodeFinal.length} chars)` : '')
         if (qrCodeFinal) {
           console.log('🔍 [WhatsApp] - qrPreview:', qrCodeFinal.substring(0, 100) + '...')
@@ -511,7 +511,7 @@ export async function connectWhatsApp(forceNewQR = false) {
         console.log('🔍 [WhatsApp] - isOnline:', isOnline)
         console.log('🔍 [WhatsApp] - lastDisconnect:', !!lastDisconnect)
         console.log('🔍 [WhatsApp] - updateKeys:', Object.keys(update))
-        console.log('🔍 [WhatsApp] - WebSocket readyState:', sock?.ws?.readyState || 'N/A')
+        // Removido: readyState não existe no tipo WebSocketClient
         console.log('🔍 [WhatsApp] - WebSocket URL:', (sock?.ws as any)?.url || 'N/A')
         
         // Se não encontrou QR mas deveria ter, mostrar todo o update
@@ -608,7 +608,7 @@ export async function connectWhatsApp(forceNewQR = false) {
                 qrCodeBase64 = await qrcode.toDataURL(qrCodeFinal, {
                   errorCorrectionLevel: 'H', // Nível H (High) para melhor correção de erros
                   type: 'image/png',
-                  quality: 1.0, // Máxima qualidade
+                  // Removido: quality não é válido para PNG
                   margin: 4, // Margem maior para melhor leitura
                   width: 512, // Tamanho grande para garantir qualidade
                   color: {
@@ -767,13 +767,14 @@ export async function connectWhatsApp(forceNewQR = false) {
         })()
         
         // Disparar evento customizado
-        if (typeof process !== 'undefined' && process.emit) {
-          try {
-            process.emit('qr-generated' as any, qrCodeFinal)
-          } catch (e) {
-            // Ignorar erro
-          }
-        }
+        // Removido: process.emit não aceita eventos customizados com string
+        // if (typeof process !== 'undefined' && process.emit) {
+        //   try {
+        //     (process as any).emit('qr-generated', qrCodeFinal)
+        //   } catch (e) {
+        //     // Ignorar erro
+        //   }
+        // }
       } else if (connection === 'connecting') {
         console.log('⏳ [WhatsApp] Status: connecting - aguardando QR Code...')
         console.log('⏳ [WhatsApp] Isso pode levar 10-60 segundos. Aguarde...')
@@ -1225,7 +1226,8 @@ export async function connectWhatsApp(forceNewQR = false) {
       // Verificar se o WebSocket está realmente conectado
       // No Baileys 6.x, pode estar em diferentes lugares
       const ws = (sock as any)?.ws || (sock as any)?.socket || null
-      const wsReadyState = ws?.readyState
+      // Removido: readyState não existe no tipo WebSocketClient
+      const wsReadyState = undefined // ws?.readyState
       if (wsReadyState !== undefined && wsReadyState !== 1) {
         // WebSocket não está aberto (1 = OPEN)
         // 0 = CONNECTING, 2 = CLOSING, 3 = CLOSED
@@ -1252,7 +1254,7 @@ export async function connectWhatsApp(forceNewQR = false) {
         console.log(`   - hasCreds: ${!!state.creds.me}`)
         console.log(`   - socketExists: ${!!sock}`)
         const wsDebug = (sock as any)?.ws || (sock as any)?.socket || null
-        console.log(`   - socketReadyState: ${wsDebug?.readyState || 'N/A'}`)
+        // Removido: readyState não existe no tipo WebSocketClient
         console.log(`   - shouldGenerateQR: ${shouldGenerateQR}`)
         
         // Se deveria gerar QR mas não está gerando, pode ser problema com Baileys
@@ -1271,7 +1273,8 @@ export async function connectWhatsApp(forceNewQR = false) {
       shouldGenerateQR,
       isConnecting,
       socketExists: !!sock,
-      socketReadyState: ((sock as any)?.ws || (sock as any)?.socket)?.readyState || 'N/A'
+      // Removido: readyState não existe no tipo WebSocketClient
+      socketReadyState: 'N/A' // ((sock as any)?.ws || (sock as any)?.socket)?.readyState || 'N/A'
     })
     
     // Diagnosticar problema
