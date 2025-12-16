@@ -46,11 +46,12 @@ export async function POST(request: NextRequest) {
       try {
         whatsappWebReady = await client.pupPage.evaluate(() => {
           try {
+            const win = window as any
             return typeof window !== 'undefined' && 
-                   typeof window.Store !== 'undefined' && 
-                   typeof window.Store.Chat !== 'undefined' &&
-                   typeof window.Store.Msg !== 'undefined' &&
-                   typeof window.Store.SendMessage !== 'undefined'
+                   typeof win.Store !== 'undefined' && 
+                   typeof win.Store.Chat !== 'undefined' &&
+                   typeof win.Store.Msg !== 'undefined' &&
+                   typeof win.Store.SendMessage !== 'undefined'
           } catch (e) {
             return false
           }
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
     )
   }
 }
+
 
 
 
