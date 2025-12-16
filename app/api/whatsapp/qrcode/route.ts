@@ -41,7 +41,6 @@ export async function GET(request: NextRequest) {
         const qrImage = await QRCode.toDataURL(qrCode, {
           errorCorrectionLevel: 'M',
           type: 'image/png',
-          quality: 0.92,
           margin: 1,
           width: 512,
         })
@@ -77,6 +76,7 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
 
 
 
