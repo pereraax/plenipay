@@ -975,7 +975,9 @@ async function transcribeAudioWithGroq(audioBuffer: Buffer, mimeType: string): P
         
         // Criar FormData para enviar arquivo (formato OpenAI-compatible)
         const formData = new FormData()
-        const blob = new Blob([audioBuffer], { type: mimeType || 'audio/webm' })
+        // Converter Buffer para Uint8Array para compatibilidade com Blob
+        const uint8Array = new Uint8Array(audioBuffer)
+        const blob = new Blob([uint8Array], { type: mimeType || 'audio/webm' })
         formData.append('file', blob, 'audio.webm')
         formData.append('model', model)
         formData.append('language', 'pt') // Português
@@ -1135,7 +1137,9 @@ export async function transcribeAudio(audioBuffer: Buffer, mimeType: string): Pr
       
       // Criar FormData para enviar arquivo
       const formData = new FormData()
-      const blob = new Blob([audioBuffer], { type: mimeType || 'audio/webm' })
+      // Converter Buffer para Uint8Array para compatibilidade com Blob
+      const uint8Array = new Uint8Array(audioBuffer)
+      const blob = new Blob([uint8Array], { type: mimeType || 'audio/webm' })
       formData.append('file', blob, 'audio.webm')
       formData.append('model', 'whisper-1')
       formData.append('language', 'pt') // Português

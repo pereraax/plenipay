@@ -37,11 +37,12 @@ const SENT_MESSAGE_CACHE_TTL = 120000 // 2 minutos
 // Limpar cache antigo
 setInterval(() => {
   const now = Date.now()
-  for (const [key, timestamp] of sentMessages.entries()) {
+  // Usar Array.from para compatibilidade com TypeScript
+  Array.from(sentMessages.entries()).forEach(([key, timestamp]) => {
     if (now - timestamp > SENT_MESSAGE_CACHE_TTL) {
       sentMessages.delete(key)
     }
-  }
+  })
 }, 60000) // Limpar a cada 1 minuto
 
 /**
