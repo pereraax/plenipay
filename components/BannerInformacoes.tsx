@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 
 interface Banner {
   id: string
@@ -19,34 +19,11 @@ export default function BannerInformacoes() {
   const [touchEnd, setTouchEnd] = useState<number | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
-  useEffect(() => {
-    carregarBanners()
-    
-    // Timeout de segurança: garantir que loading seja false após 5 segundos
-    const timeout = setTimeout(() => {
-      setLoading(false)
-    }, 5000)
-    
-    return () => clearTimeout(timeout)
-  }, [])
-
-  useEffect(() => {
-    if (banners.length <= 1) return
-
-    // Configurar transição automática usando o tempo do banner atual
-    const tempoAtual = banners[bannerAtual]?.tempo_transicao || tempoTransicao
-    const interval = setInterval(() => {
-      mudarBanner((prev) => (prev + 1) % banners.length)
-    }, tempoAtual * 1000)
-
-    return () => clearInterval(interval)
-  }, [banners, bannerAtual, tempoTransicao])
-
   const mudarBanner = (newIndex: number | ((prev: number) => number)) => {
     setBannerAtual(newIndex)
   }
 
-  const carregarBanners = async () => {
+  const carregarBanners = useCallback(async () => {
     try {
       console.log('🔄 [BannerInformacoes] Iniciando carregamento de banners...')
       const response = await fetch('/api/banners', {
@@ -80,7 +57,30 @@ export default function BannerInformacoes() {
       setLoading(false)
       console.log('🏁 [BannerInformacoes] Carregamento finalizado. Loading:', false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    carregarBanners()
+    
+    // Timeout de segurança: garantir que loading seja false após 5 segundos
+    const timeout = setTimeout(() => {
+      setLoading(false)
+    }, 5000)
+    
+    return () => clearTimeout(timeout)
+  }, [carregarBanners])
+
+  useEffect(() => {
+    if (banners.length <= 1) return
+
+    // Configurar transição automática usando o tempo do banner atual
+    const tempoAtual = banners[bannerAtual]?.tempo_transicao || tempoTransicao
+    const interval = setInterval(() => {
+      setBannerAtual((prev) => (prev + 1) % banners.length)
+    }, tempoAtual * 1000)
+
+    return () => clearInterval(interval)
+  }, [banners, bannerAtual, tempoTransicao])
 
   // Funções para swipe
   const minSwipeDistance = 50
