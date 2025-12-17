@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { Check, Copy, ArrowLeft, Loader2, QrCode, Smartphone, Clock, RefreshCw } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import { createNotification } from '@/components/NotificationBell'
 import ModalBoasVindas from '@/components/ModalBoasVindas'
 
-export default function PagamentoPixPage() {
+export const dynamic = 'force-dynamic'
+
+function PagamentoPixContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [pixQrCode, setPixQrCode] = useState<string | null>(null)

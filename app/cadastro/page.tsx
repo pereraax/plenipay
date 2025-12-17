@@ -1,19 +1,19 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { signUp } from '@/lib/auth'
 import { createNotification } from '@/components/NotificationBell'
-import { ArrowLeft, Eye, EyeOff } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import ModalConfirmarEmail from '@/components/ModalConfirmarEmail'
 import ModalLoginConcluido from '@/components/ModalLoginConcluido'
 import { createClient } from '@/lib/supabase/client'
 
-export default function CadastroPage() {
+export const dynamic = 'force-dynamic'
+
+function CadastroContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const plano = (searchParams.get('plano') as 'teste' | 'basico' | 'premium') || 'teste'

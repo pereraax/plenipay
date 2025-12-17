@@ -1,15 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { Check, ArrowLeft, Loader2, Smartphone, Receipt, CreditCard } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { createNotification } from '@/components/NotificationBell'
 import Sidebar from '@/components/Sidebar'
 import { MenuButton } from '@/components/MobileMenu'
 import Logo from '@/components/Logo'
+
+export const dynamic = 'force-dynamic'
 
 function CheckoutContent() {
   const router = useRouter()
@@ -441,5 +441,17 @@ function CheckoutContent() {
         </div>
       </main>
     </div>
+  )
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#00C2FF]" size={48} />
+      </div>
+    }>
+      <CheckoutContent />
+    </Suspense>
   )
 }

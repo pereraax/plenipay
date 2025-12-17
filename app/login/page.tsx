@@ -1,18 +1,18 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-
-export const dynamic = 'force-dynamic'
 import { createNotification } from '@/components/NotificationBell'
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
+import { Eye, EyeOff, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import Image from 'next/image'
 import { createClient } from '@/lib/supabase/client'
 import ModalEmailConfirmadoSucesso from '@/components/ModalEmailConfirmadoSucesso'
 import ModalLoginConcluido from '@/components/ModalLoginConcluido'
 
-export default function LoginPage() {
+export const dynamic = 'force-dynamic'
+
+function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [loading, setLoading] = useState(false)
@@ -413,5 +413,17 @@ export default function LoginPage() {
         mensagem="Login realizado com sucesso! Você será redirecionado em instantes..."
       />
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#00C2FF]" size={48} />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   )
 }
