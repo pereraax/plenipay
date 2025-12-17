@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const user = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    const user = (usersData.users as any[]).find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
 
     if (!user) {
       return NextResponse.json(

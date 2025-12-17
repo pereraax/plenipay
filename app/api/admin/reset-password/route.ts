@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     if (supabaseAdmin) {
       try {
         const { data: users, error: listError } = await supabaseAdmin.auth.admin.listUsers()
-        const userExists = users?.users?.some(u => u.email === email)
+        const userExists = users?.users?.some((u: any) => u.email === email)
         
         if (listError) {
           console.warn('⚠️ Não foi possível verificar se usuário existe:', listError.message)

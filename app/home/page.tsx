@@ -14,6 +14,7 @@ import FiltroRapidoDataWrapper, { FiltroDataProvider } from '@/components/Filtro
 import ReceitasDespesasDonut from '@/components/ReceitasDespesasDonut'
 import { Suspense } from 'react'
 
+export const dynamic = 'force-dynamic'
 // Otimizar: cache de 60 segundos para melhor performance
 export const revalidate = 60
 

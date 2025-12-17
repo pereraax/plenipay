@@ -123,3 +123,4 @@ async function processarComandoComImagem(imageBase64: string) {
 
 
 
+

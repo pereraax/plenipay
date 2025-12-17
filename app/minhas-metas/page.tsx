@@ -10,6 +10,7 @@ import { obterMetasCofrinho } from '@/lib/actions'
 import MinhasMetasView from '@/components/MinhasMetasView'
 import Image from 'next/image'
 
+export const dynamic = 'force-dynamic'
 // Otimizar: cache de 60 segundos (metas mudam menos frequentemente)
 export const revalidate = 60
 

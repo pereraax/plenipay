@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verificarStatusInstancia } from '@/lib/whatsapp-instance-manager'
 import { getQRCodeAtual } from '@/lib/whatsapp-baileys'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET - Obter QR Code atual
  */
@@ -37,6 +39,7 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+
 
 
 

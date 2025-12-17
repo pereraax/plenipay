@@ -9,6 +9,8 @@ import { addWebhookLog } from '@/lib/webhook-logs'
 import { addSendLog, getSendLogs } from '@/lib/send-logs'
 import { detectMedia, downloadMedia, processComprovanteImage, transcribeAudio } from '@/lib/whatsapp-media-processor'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * Verificar se o texto é uma URL de imagem e processar
  */

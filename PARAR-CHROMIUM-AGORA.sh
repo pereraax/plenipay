@@ -13,3 +13,4 @@ echo "📊 Processos restantes: $COUNT"
 
 
 
+
