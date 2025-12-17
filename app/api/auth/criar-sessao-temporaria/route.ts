@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Encontrar usuário pelo email
-    const user = usersData.users.find(u => u.email?.toLowerCase() === email.toLowerCase())
+    const user = usersData.users.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
 
     if (!user) {
       return NextResponse.json(
