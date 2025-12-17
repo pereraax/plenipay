@@ -103,21 +103,26 @@ const nextConfig = {
       // No SERVIDOR, tentar usar bufferutil e utf-8-validate se disponíveis
       // Essas são dependências opcionais do ws que melhoram performance
       // No Vercel, podem não estar disponíveis, então tratamos como opcionais
+      const fallback = { ...config.resolve.fallback }
+      
+      // Verificar se os módulos existem antes de tentar resolver
       try {
-        config.resolve.fallback = {
-          ...config.resolve.fallback,
-          'utf-8-validate': require.resolve('utf-8-validate'),
-          'bufferutil': require.resolve('bufferutil'),
-        }
+        require.resolve('utf-8-validate')
+        fallback['utf-8-validate'] = require.resolve('utf-8-validate')
       } catch (error) {
-        // Se não estiverem disponíveis (ex: Vercel), usar fallback vazio
-        // O ws funcionará sem essas otimizações
-        config.resolve.fallback = {
-          ...config.resolve.fallback,
-          'utf-8-validate': false,
-          'bufferutil': false,
-        }
+        // Módulo não disponível, usar false (ws funcionará sem otimização)
+        fallback['utf-8-validate'] = false
       }
+      
+      try {
+        require.resolve('bufferutil')
+        fallback['bufferutil'] = require.resolve('bufferutil')
+      } catch (error) {
+        // Módulo não disponível, usar false (ws funcionará sem otimização)
+        fallback['bufferutil'] = false
+      }
+      
+      config.resolve.fallback = fallback
     }
     
     // No servidor, marcar como externo (não bundlar, usar require direto)
