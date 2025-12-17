@@ -383,3 +383,15 @@ function PagamentoPixContent() {
   )
 }
 
+export default function PagamentoPixPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-[#00C2FF]" size={48} />
+      </div>
+    }>
+      <PagamentoPixContent />
+    </Suspense>
+  )
+}
+
