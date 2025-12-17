@@ -1,0 +1,194 @@
+/* Classes Utilitárias - Movidas de globals.css para resolver problemas no Vercel */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .transition-smooth {
+    @apply transition-all duration-300 ease-in-out;
+  }
+  
+  .glass-backdrop {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0, 0, 0, 0.3) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    z-index: 9998 !important;
+  }
+  
+  .animate-fade-in {
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  .animate-slide-fade {
+    animation: slideFade 0.5s ease-out;
+  }
+
+  .animate-slide-fade-delayed {
+    animation: slideFade 0.6s ease-out;
+  }
+
+  .animate-slide-smooth {
+    animation: slideSmooth 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .animate-slide-up {
+    animation: slideUp 0.2s ease-out;
+  }
+  
+  .animate-slide-down {
+    animation: slideDown 0.2s ease-out;
+  }
+  
+  .animate-scale-up {
+    animation: scaleUp 0.15s ease-out;
+  }
+  
+  .animate-scale-in {
+    animation: scaleIn 0.3s ease-out;
+  }
+  
+  .animate-bounce-slow {
+    animation: bounceSlow 2s ease-in-out infinite;
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  .animate-float-subtle {
+    animation: float-subtle 3s ease-in-out infinite;
+  }
+  
+  .animate-pulse-slow {
+    animation: pulse-slow 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  }
+  
+  .animate-float-delayed {
+    animation: float-delayed 4s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  
+  .animate-float-1 {
+    animation: float 4s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+
+  .animate-float-2 {
+    animation: float 5s ease-in-out infinite;
+    animation-delay: 1.5s;
+  }
+
+  .animate-float-3 {
+    animation: float 4.5s ease-in-out infinite;
+    animation-delay: 2.5s;
+  }
+  
+  .animate-twinkle {
+    animation: twinkle 2s ease-in-out infinite;
+  }
+
+  .animate-twinkle-delayed {
+    animation: twinkle 2s ease-in-out infinite;
+    animation-delay: 0.5s;
+  }
+
+  .animate-twinkle-delayed-2 {
+    animation: twinkle 2s ease-in-out infinite;
+    animation-delay: 1s;
+  }
+  
+  .animate-checkbox-check {
+    animation: checkboxCheck 0.2s ease-out;
+  }
+  
+  .animate-bounce-subtle {
+    animation: bounce-subtle 2s ease-in-out infinite;
+  }
+  
+  .animate-slide-in-left {
+    animation: slide-in-left 0.5s ease-out;
+  }
+  
+  .animate-slide-in-from-left {
+    animation: slide-in-from-left 0.3s ease-out;
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.5s ease-out;
+    animation-delay: 0.1s;
+    animation-fill-mode: both;
+  }
+  
+  .animate-slide-in-up {
+    animation: slide-in-up 0.6s ease-out;
+    animation-delay: 0.2s;
+    animation-fill-mode: both;
+  }
+  
+  .animate-pulse-subtle {
+    animation: pulse-subtle 2s ease-in-out infinite;
+  }
+  
+  .animate-shimmer {
+    animation: shimmer 3s ease-in-out infinite;
+  }
+  
+  .animate-sound-wave {
+    animation: soundWave 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+  }
+
+  .animate-sound-wave-delayed {
+    animation: soundWave 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    animation-delay: 0.4s;
+  }
+  
+  .animate-plen-open {
+    animation: plenOpen 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  
+  .animate-plen-rotate {
+    animation: plenRotate 8s linear infinite;
+  }
+  
+  .animate-plen-shine {
+    background: linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0) 0%,
+      rgba(255, 255, 255, 0.3) 50%,
+      rgba(255, 255, 255, 0) 100%
+    );
+    background-size: 200% 100%;
+    animation: plenShine 3s ease-in-out infinite;
+    background-clip: padding-box;
+  }
+  
+  .animate-plen-glow {
+    animation: plenGlow 2s ease-in-out infinite;
+  }
+  
+  .animate-plen-rare {
+    animation: plenRare 6s ease-in-out infinite;
+  }
+  
+  .animate-slide-in-right {
+    animation: slide-in-right 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+  }
+  
+  .animate-notification-glow {
+    animation: notification-glow 2s ease-in-out infinite;
+  }
+  
+  .animate-gradient {
+    background-size: 200% 200%;
+    animation: gradient 3s ease infinite;
+  }
+}
+

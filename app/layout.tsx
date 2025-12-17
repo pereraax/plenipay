@@ -1,5 +1,7 @@
 import type { Metadata } from 'next'
 import './globals.css'
+import './animations.css'
+import './utilities.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import ChatWidget from '@/components/ChatWidget'
 import PlenAssistant from '@/components/PlenAssistant'
