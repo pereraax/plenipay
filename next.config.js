@@ -141,6 +141,9 @@ const nextConfig = {
     // Simplificado para evitar stack overflow no micromatch
     config.ignoreWarnings = [
       { module: /whatsapp-web/ },
+      // Ignorar avisos de módulos não encontrados que são opcionais
+      { message: /Module not found/ },
+      { message: /Can't resolve/ },
     ]
     
     return config
