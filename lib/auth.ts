@@ -420,7 +420,7 @@ export async function reenviarCodigoEmail(email: string) {
       return { error: 'Erro ao buscar usuário. Tente novamente.' }
     }
     
-    const user = users.users.find(u => u.email === email)
+    const user = (users.users as any[]).find((u: any) => u.email === email)
     
     if (!user) {
       console.error('❌ Usuário não encontrado para:', email)
