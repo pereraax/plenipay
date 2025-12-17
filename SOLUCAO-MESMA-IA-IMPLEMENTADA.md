@@ -100,3 +100,4 @@ Agora usa a mesma IA confiável que já processa texto! 🎉
 
 
 
+
