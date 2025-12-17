@@ -14,6 +14,7 @@ const nextConfig = {
     optimizeCss: false,
   },
   
+  
   // Desabilitar otimização de CSS que pode causar problemas no Vercel
   swcMinify: true,
   
@@ -145,14 +146,20 @@ const nextConfig = {
       })
     }
     
-    // Ignorar avisos relacionados ao whatsapp-web.js
+    // Ignorar avisos relacionados ao whatsapp-web.js e CSS
     // Simplificado para evitar stack overflow no micromatch
     config.ignoreWarnings = [
       { module: /whatsapp-web/ },
       // Ignorar avisos de módulos não encontrados que são opcionais
       { message: /Module not found/ },
       { message: /Can't resolve/ },
+      // Ignorar avisos de CSS que podem causar problemas no Vercel
+      { message: /css-loader/ },
+      { message: /postcss/ },
     ]
+    
+    // Resolver problemas com CSS loader no Vercel
+    config.resolve.extensions = [...(config.resolve.extensions || []), '.css']
     
     return config
   },
