@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 import { createNotification } from '@/components/NotificationBell'
 import { Eye, EyeOff, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'

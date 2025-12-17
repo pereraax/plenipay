@@ -2,6 +2,8 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
+
+export const dynamic = 'force-dynamic'
 import { Check, Copy, ArrowLeft, Loader2, QrCode, Smartphone, Clock, RefreshCw } from 'lucide-react'
 import Sidebar from '@/components/Sidebar'
 import { createNotification } from '@/components/NotificationBell'
