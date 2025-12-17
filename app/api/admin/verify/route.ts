@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { jwtVerify } from 'jose'
 
+export const dynamic = 'force-dynamic'
+
 const secret = new TextEncoder().encode(
   process.env.ADMIN_JWT_SECRET || 'your-secret-key-change-in-production'
 )

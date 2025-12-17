@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { verificarStatusInstancia } from '@/lib/whatsapp-instance-manager'
 
+export const dynamic = 'force-dynamic'
+
 /**
  * GET - Verificar status da instância WhatsApp
  */
