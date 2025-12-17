@@ -153,10 +153,11 @@ const nextConfig = {
       // Ignorar avisos de módulos não encontrados que são opcionais
       { message: /Module not found/ },
       { message: /Can't resolve/ },
-      // Ignorar avisos de CSS que podem causar problemas no Vercel
+      // Ignorar TODOS os avisos de CSS que podem causar problemas no Vercel
       { message: /css-loader/ },
       { message: /postcss/ },
       { message: /globals\.css/ },
+      { message: /\.css/ },
     ]
     
     // Resolver problemas com CSS loader no Vercel
@@ -165,6 +166,11 @@ const nextConfig = {
     }
     if (!config.resolve.extensions.includes('.css')) {
       config.resolve.extensions.push('.css')
+    }
+    
+    // Desabilitar otimizações de CSS que causam problemas no Vercel
+    if (config.optimization) {
+      config.optimization.minimize = true
     }
     
     
