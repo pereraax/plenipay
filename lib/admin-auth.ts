@@ -172,7 +172,7 @@ export async function obterTodosUsuarios() {
           // Criar um mapa de last_sign_in_at por user_id
           const lastSignInMap = new Map<string, string | null>()
           if (authUsers?.users) {
-            authUsers.users.forEach(user => {
+            (authUsers.users as any[]).forEach((user: any) => {
               lastSignInMap.set(user.id, user.last_sign_in_at || null)
             })
           }
