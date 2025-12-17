@@ -100,12 +100,23 @@ const nextConfig = {
         'whatsapp-web.js': false,
       }
     } else {
-      // No SERVIDOR, garantir que bufferutil e utf-8-validate funcionem
+      // No SERVIDOR, tentar usar bufferutil e utf-8-validate se disponíveis
       // Essas são dependências opcionais do ws que melhoram performance
-      config.resolve.fallback = {
-        ...config.resolve.fallback,
-        'utf-8-validate': require.resolve('utf-8-validate'),
-        'bufferutil': require.resolve('bufferutil'),
+      // No Vercel, podem não estar disponíveis, então tratamos como opcionais
+      try {
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          'utf-8-validate': require.resolve('utf-8-validate'),
+          'bufferutil': require.resolve('bufferutil'),
+        }
+      } catch (error) {
+        // Se não estiverem disponíveis (ex: Vercel), usar fallback vazio
+        // O ws funcionará sem essas otimizações
+        config.resolve.fallback = {
+          ...config.resolve.fallback,
+          'utf-8-validate': false,
+          'bufferutil': false,
+        }
       }
     }
     
