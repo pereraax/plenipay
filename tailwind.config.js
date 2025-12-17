@@ -1,13 +1,11 @@
-import type { Config } from 'tailwindcss'
-
-const config: Config = {
-  darkMode: 'class', // Habilita dark mode via classe
+/** @type {import('tailwindcss').Config} */
+module.exports = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
     './app/**/*.{js,ts,jsx,tsx,mdx}',
   ],
-  // SAFELIST CRÍTICA - Força geração de classes mesmo se não detectadas
   safelist: [
     // Cores customizadas
     'bg-[#1a1a1a]',
@@ -86,7 +84,7 @@ const config: Config = {
         display: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
       },
       fontWeight: {
-        display: '300', // Light como padrão para font-display (muito leve)
+        display: '300',
       },
       borderRadius: {
         'xl': '1rem',
@@ -110,5 +108,4 @@ const config: Config = {
   },
   plugins: [],
 }
-export default config
 

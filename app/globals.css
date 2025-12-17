@@ -6,6 +6,14 @@
   --foreground-rgb: 0, 0, 0;
   --background-start-rgb: 214, 219, 220;
   --background-end-rgb: 255, 255, 255;
+  /* Cores customizadas como variáveis CSS */
+  --color-primary: #00C2FF;
+  --color-primary-dark: #0099CC;
+  --color-primary-darker: #007A99;
+  --color-dark-bg: #1a1a1a;
+  --color-dark-border: #2a2a2a;
+  --color-dark-text: #0D1B2A;
+  --color-light-bg: #E6F7FF;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -59,6 +67,61 @@ body {
     @apply transition-all duration-300 ease-in-out;
   }
 }
+
+/* CORES CUSTOMIZADAS - Múltiplas abordagens para garantir funcionamento */
+/* Abordagem 1: Seletores de atributo (funcionam sempre) - com aspas duplas E simples */
+[class*="bg-[#1a1a1a]"],
+[class*='bg-[#1a1a1a]'] { background-color: #1a1a1a !important; }
+[class*="bg-[#2a2a2a]"],
+[class*='bg-[#2a2a2a]'] { background-color: #2a2a2a !important; }
+[class*="bg-[#00C2FF]"],
+[class*='bg-[#00C2FF]'] { background-color: #00C2FF !important; }
+[class*="bg-[#0099CC]"],
+[class*='bg-[#0099CC]'] { background-color: #0099CC !important; }
+[class*="bg-[#007A99]"],
+[class*='bg-[#007A99]'] { background-color: #007A99 !important; }
+[class*="bg-[#0D1B2A]"],
+[class*='bg-[#0D1B2A]'] { background-color: #0D1B2A !important; }
+[class*="bg-[#E6F7FF]"],
+[class*='bg-[#E6F7FF]'] { background-color: #E6F7FF !important; }
+[class*="bg-[#25D366]"],
+[class*='bg-[#25D366]'] { background-color: #25D366 !important; }
+[class*="bg-[#20BA5A]"],
+[class*='bg-[#20BA5A]'] { background-color: #20BA5A !important; }
+[class*="bg-[#00B8E6]"],
+[class*='bg-[#00B8E6]'] { background-color: #00B8E6 !important; }
+[class*="text-[#00C2FF]"],
+[class*='text-[#00C2FF]'] { color: #00C2FF !important; }
+[class*="text-[#0D1B2A]"],
+[class*='text-[#0D1B2A]'] { color: #0D1B2A !important; }
+[class*="border-[#00C2FF]"],
+[class*='border-[#00C2FF]'] { border-color: #00C2FF !important; }
+[class*="border-[#2a2a2a]"],
+[class*='border-[#2a2a2a]'] { border-color: #2a2a2a !important; }
+
+/* Classes com escape para Tailwind (processamento direto) */
+.bg-\[#1a1a1a\] { background-color: #1a1a1a !important; }
+.bg-\[#2a2a2a\] { background-color: #2a2a2a !important; }
+.bg-\[#00C2FF\] { background-color: #00C2FF !important; }
+.bg-\[#0099CC\] { background-color: #0099CC !important; }
+.bg-\[#007A99\] { background-color: #007A99 !important; }
+.bg-\[#0D1B2A\] { background-color: #0D1B2A !important; }
+.bg-\[#E6F7FF\] { background-color: #E6F7FF !important; }
+.bg-\[#25D366\] { background-color: #25D366 !important; }
+.bg-\[#20BA5A\] { background-color: #20BA5A !important; }
+.bg-\[#00B8E6\] { background-color: #00B8E6 !important; }
+.text-\[#00C2FF\] { color: #00C2FF !important; }
+.text-\[#0D1B2A\] { color: #0D1B2A !important; }
+.border-\[#00C2FF\] { border-color: #00C2FF !important; }
+.border-\[#2a2a2a\] { border-color: #2a2a2a !important; }
+.from-\[#00C2FF\] { --tw-gradient-from: #00C2FF var(--tw-gradient-from-position, 0%); --tw-gradient-to: rgb(0 194 255 / 0) var(--tw-gradient-to-position, 100%); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-\[#0099CC\] { --tw-gradient-to: #0099CC var(--tw-gradient-to-position, 100%); }
+.shadow-\[#00C2FF\] { box-shadow: 0 0 0 1px rgba(0, 194, 255, 0.1); }
+.hover\:bg-\[#0099CC\]:hover { background-color: #0099CC !important; }
+.hover\:bg-\[#007A99\]:hover { background-color: #007A99 !important; }
+.hover\:bg-\[#20BA5A\]:hover { background-color: #20BA5A !important; }
+.hover\:bg-\[#00B8E6\]:hover { background-color: #00B8E6 !important; }
+.hover\:shadow-\[#00C2FF\]\/30:hover { box-shadow: 0 10px 15px -3px rgba(0, 194, 255, 0.3), 0 4px 6px -2px rgba(0, 194, 255, 0.3) !important; }
 
 /* Remover outline amarelo padrão do navegador em todos os campos de formulário */
 input:focus,
