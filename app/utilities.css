@@ -1,5 +1,9 @@
 /* Classes Utilitárias - Movidas de globals.css para resolver problemas no Vercel */
 
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;
