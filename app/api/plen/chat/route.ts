@@ -1159,7 +1159,7 @@ export async function POST(request: NextRequest) {
       gastosSemana,
       gastosMes,
       totalEntradas: (estatisticas as any)?.totalEntradas || 0,
-      totalSaidas: estatisticas?.totalSaidas || 0
+      totalSaidas: (estatisticas as any)?.totalSaidas || 0
     }
 
     // Verificar se é uma confirmação (sim/não) de uma transação pendente
