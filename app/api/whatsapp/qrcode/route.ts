@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { connectWhatsApp, getQRCodeAtual } from '@/lib/whatsapp-baileys'
 import QRCode from 'qrcode'
 
+export const dynamic = 'force-dynamic'
+
 export async function GET(request: NextRequest) {
   try {
     console.log('🔍 [QR Code] Buscando QR Code...')

@@ -2,6 +2,8 @@ import { obterEstatisticasUsuarios } from '@/lib/admin-auth'
 import { Users, CreditCard, UserCheck, TrendingUp, Loader2, AlertCircle } from 'lucide-react'
 import VisitorStats from '@/components/VisitorStats'
 
+export const dynamic = 'force-dynamic'
+
 export default async function AdminDashboardPage() {
   let stats: { data: any; error: null } | { data: null; error: string } | null = null
   let isLoading = true
