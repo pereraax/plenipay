@@ -1158,7 +1158,7 @@ export async function POST(request: NextRequest) {
       estatisticas,
       gastosSemana,
       gastosMes,
-      totalEntradas: estatisticas?.totalEntradas || 0,
+      totalEntradas: (estatisticas as any)?.totalEntradas || 0,
       totalSaidas: estatisticas?.totalSaidas || 0
     }
 
