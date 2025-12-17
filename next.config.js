@@ -14,6 +14,9 @@ const nextConfig = {
     optimizeCss: false,
   },
   
+  // Desabilitar otimização de CSS que pode causar problemas no Vercel
+  swcMinify: true,
+  
   // Headers de segurança (apenas em produção)
   async headers() {
     // Em desenvolvimento, não aplicar headers restritivos que podem causar problemas
