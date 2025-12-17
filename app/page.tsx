@@ -136,6 +136,7 @@ export default function LandingPage() {
               width={300}
               height={75}
               className="h-8 sm:h-10 md:h-14 w-auto object-contain"
+              style={{ width: 'auto', height: '100%' }}
               priority
             />
           </div>
