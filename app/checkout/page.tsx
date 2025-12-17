@@ -11,7 +11,7 @@ import Sidebar from '@/components/Sidebar'
 import { MenuButton } from '@/components/MobileMenu'
 import Logo from '@/components/Logo'
 
-export default function CheckoutPage() {
+function CheckoutContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
   const plano = searchParams.get('plano') as 'basico' | 'premium' | 'anual' | null
