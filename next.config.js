@@ -9,9 +9,9 @@ const nextConfig = {
     unoptimized: true,
   },
   
-  // Configuração experimental para resolver problemas de CSS no Vercel
+  // Configuração experimental
   experimental: {
-    optimizeCss: false,
+    // Removido optimizeCss para compatibilidade com Cloudflare Pages
   },
   
   // Headers de segurança (apenas em produção)
@@ -148,31 +148,20 @@ const nextConfig = {
       })
     }
     
-    // Ignorar avisos relacionados ao whatsapp-web.js e CSS
-    // Simplificado para evitar stack overflow no micromatch
+    // Ignorar avisos relacionados ao whatsapp-web.js
     config.ignoreWarnings = [
       { module: /whatsapp-web/ },
       // Ignorar avisos de módulos não encontrados que são opcionais
       { message: /Module not found/ },
       { message: /Can't resolve/ },
-      // Ignorar TODOS os avisos de CSS que podem causar problemas no Vercel
-      { message: /css-loader/ },
-      { message: /postcss/ },
-      { message: /globals\.css/ },
-      { message: /\.css/ },
     ]
     
-    // Resolver problemas com CSS loader no Vercel
+    // Configurações de resolução
     if (!config.resolve.extensions) {
       config.resolve.extensions = []
     }
     if (!config.resolve.extensions.includes('.css')) {
       config.resolve.extensions.push('.css')
-    }
-    
-    // Desabilitar otimizações de CSS que causam problemas no Vercel
-    if (config.optimization) {
-      config.optimization.minimize = true
     }
     
     
