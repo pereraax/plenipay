@@ -138,12 +138,9 @@ const nextConfig = {
     }
     
     // Ignorar avisos relacionados ao whatsapp-web.js
+    // Simplificado para evitar stack overflow no micromatch
     config.ignoreWarnings = [
-      ...(config.ignoreWarnings || []),
-      { module: /node_modules\/whatsapp-web\.js/ },
-      { message: /WAWebPollsVotesSchema/ },
-      { message: /Module not found.*whatsapp-web/ },
-      { message: /Can't resolve.*whatsapp-web/ },
+      { module: /whatsapp-web/ },
     ]
     
     return config
