@@ -167,24 +167,6 @@ const nextConfig = {
       config.resolve.extensions.push('.css')
     }
     
-    // Configuração específica para CSS loader no Vercel
-    const cssRule = config.module.rules.find((rule: any) => 
-      rule.test && rule.test.toString().includes('css')
-    )
-    if (cssRule && Array.isArray(cssRule.use)) {
-      cssRule.use = cssRule.use.map((loader: any) => {
-        if (typeof loader === 'string' && loader.includes('css-loader')) {
-          return {
-            loader: loader,
-            options: {
-              ...(typeof loader === 'object' ? loader.options : {}),
-              esModule: false,
-            }
-          }
-        }
-        return loader
-      })
-    }
     
     return config
   },
