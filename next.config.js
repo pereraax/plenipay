@@ -9,6 +9,11 @@ const nextConfig = {
     unoptimized: true,
   },
   
+  // Configuração experimental para resolver problemas de CSS no Vercel
+  experimental: {
+    optimizeCss: false,
+  },
+  
   // Headers de segurança (apenas em produção)
   async headers() {
     // Em desenvolvimento, não aplicar headers restritivos que podem causar problemas
