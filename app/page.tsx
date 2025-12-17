@@ -248,6 +248,7 @@ export default function LandingPage() {
                   width={600}
                   height={800}
                   className="w-full h-auto relative z-10"
+                  style={{ width: 'auto', height: 'auto' }}
                   priority
                   unoptimized
                 />
@@ -299,6 +300,7 @@ export default function LandingPage() {
                   width={600}
                   height={400}
                   className="w-full h-auto object-contain"
+                  style={{ width: 'auto', height: 'auto' }}
                   unoptimized
                 />
               </div>
@@ -342,6 +344,7 @@ export default function LandingPage() {
                   width={600}
                   height={400}
                   className="w-full h-auto object-contain"
+                  style={{ width: 'auto', height: 'auto' }}
                   unoptimized
                 />
               </div>
@@ -828,6 +831,7 @@ export default function LandingPage() {
                 width={800}
                 height={600}
                 className="w-full h-auto object-contain"
+                style={{ width: 'auto', height: 'auto' }}
                 priority
                 unoptimized
               />
