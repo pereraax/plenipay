@@ -1,7 +1,6 @@
 /* Classes Utilitárias - Movidas de globals.css para resolver problemas no Vercel */
-/* NOTA: @tailwind directives devem estar APENAS em globals.css */
-
-@layer utilities {
+/* NOTA: Não usar @layer utilities aqui - usar apenas CSS normal */
+/* As classes podem usar @apply se necessário, mas sem @layer */
   .text-balance {
     text-wrap: balance;
   }
