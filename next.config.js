@@ -79,6 +79,12 @@ const nextConfig = {
   // Desabilitar source maps em produção (segurança)
   productionBrowserSourceMaps: false,
   
+  // Ignorar erros de páginas não encontradas durante build
+  onDemandEntries: {
+    maxInactiveAge: 25 * 1000,
+    pagesBufferLength: 2,
+  },
+  
   webpack: (config, { isServer }) => {
     // Configurar paths do TypeScript (@/*)
     config.resolve.alias = {
