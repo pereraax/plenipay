@@ -68,38 +68,9 @@ body {
   }
 }
 
-/* CORES CUSTOMIZADAS - Múltiplas abordagens para garantir funcionamento */
-/* Abordagem 1: Seletores de atributo (funcionam sempre) - com aspas duplas E simples */
-[class*="bg-[#1a1a1a]"],
-[class*='bg-[#1a1a1a]'] { background-color: #1a1a1a !important; }
-[class*="bg-[#2a2a2a]"],
-[class*='bg-[#2a2a2a]'] { background-color: #2a2a2a !important; }
-[class*="bg-[#00C2FF]"],
-[class*='bg-[#00C2FF]'] { background-color: #00C2FF !important; }
-[class*="bg-[#0099CC]"],
-[class*='bg-[#0099CC]'] { background-color: #0099CC !important; }
-[class*="bg-[#007A99]"],
-[class*='bg-[#007A99]'] { background-color: #007A99 !important; }
-[class*="bg-[#0D1B2A]"],
-[class*='bg-[#0D1B2A]'] { background-color: #0D1B2A !important; }
-[class*="bg-[#E6F7FF]"],
-[class*='bg-[#E6F7FF]'] { background-color: #E6F7FF !important; }
-[class*="bg-[#25D366]"],
-[class*='bg-[#25D366]'] { background-color: #25D366 !important; }
-[class*="bg-[#20BA5A]"],
-[class*='bg-[#20BA5A]'] { background-color: #20BA5A !important; }
-[class*="bg-[#00B8E6]"],
-[class*='bg-[#00B8E6]'] { background-color: #00B8E6 !important; }
-[class*="text-[#00C2FF]"],
-[class*='text-[#00C2FF]'] { color: #00C2FF !important; }
-[class*="text-[#0D1B2A]"],
-[class*='text-[#0D1B2A]'] { color: #0D1B2A !important; }
-[class*="border-[#00C2FF]"],
-[class*='border-[#00C2FF]'] { border-color: #00C2FF !important; }
-[class*="border-[#2a2a2a]"],
-[class*='border-[#2a2a2a]'] { border-color: #2a2a2a !important; }
-
-/* Classes com escape para Tailwind (processamento direto) */
+/* CORES CUSTOMIZADAS - Classes diretas (compatíveis com PostCSS/Tailwind) */
+/* Removidos seletores de atributo [class*="..."] que causavam problemas no Cloudflare */
+/* As classes diretas abaixo fazem o mesmo trabalho de forma mais compatível */
 .bg-\[#1a1a1a\] { background-color: #1a1a1a !important; }
 .bg-\[#2a2a2a\] { background-color: #2a2a2a !important; }
 .bg-\[#00C2FF\] { background-color: #00C2FF !important; }
